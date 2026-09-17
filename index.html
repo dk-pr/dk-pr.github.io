@@ -1,0 +1,1615 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pilzradar Rathenow</title>
+<meta name="description" content="Wo im Havelland stehen die Chancen auf Steinpilz, Marone und Pfifferling gerade gut? Echte Waldflächen aus OpenStreetMap, Baumart aus der Copernicus-Waldtypkarte, Live-Wetter von Open-Meteo." />
+<meta name="author" content="Denny Kühne" />
+<meta name="theme-color" content="#4a7c41" />
+<link rel="canonical" href="https://hvlon3-boop.github.io/pilzradar/" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Pilzradar Rathenow" />
+<meta property="og:description" content="Fund-Chance für Steinpilz, Marone und Pfifferling im Havelland – je Waldfläche, aus echten OSM-Daten und Live-Wetter." />
+<meta property="og:url" content="https://hvlon3-boop.github.io/pilzradar/" />
+<meta property="og:image" content="https://hvlon3-boop.github.io/pilzradar/vorschau.png" />
+<meta property="og:locale" content="de_DE" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  /* Herbst – warmes Laub über gedämpftem Moosgrün, Standard */
+  :root{
+    --green:#4a7c41; --green-2:#7aa85c; --green-3:#e3ecd8; --deep:#26331f;
+    --ink:#2b3327; --muted:#71796a; --line:#e0e4d8; --soft:#f7f8f2; --white:#fff;
+    --amber:#c98a2e; --red:#b5533f; --blue:#5f92ab;
+    --akzent:#c98a2e;
+    --shadow:0 12px 32px rgba(38,51,31,.09);
+    --bg:#f0f1e8;
+    --karte:#fff;
+  }
+  /* Nacht – für frühmorgens vor der Tour */
+  html[data-theme="nacht"]{
+    --green:#7fb069; --green-2:#a3c98a; --green-3:#2a3826; --deep:#e8ece3;
+    --ink:#dfe4d8; --muted:#8d968a; --line:#333a30; --soft:#232a20; --white:#1b2119;
+    --amber:#e0a94a; --red:#d4715c; --blue:#7fa8c4; --akzent:#e0a94a;
+    --shadow:0 12px 32px rgba(0,0,0,.45);
+    --bg:#151a13; --karte:#1b2119;
+  }
+  /* Kiefer – kühles Nadelgrün, hoher Kontrast */
+  html[data-theme="kiefer"]{
+    --green:#2f6b5f; --green-2:#5a9b8c; --green-3:#d9eae5; --deep:#16302b;
+    --ink:#1e332f; --muted:#657a75; --line:#d7e2df; --soft:#f2f8f6; --white:#fff;
+    --amber:#c08a3e; --red:#b5544a; --blue:#4f8fa8; --akzent:#2f6b5f;
+    --shadow:0 12px 32px rgba(22,48,43,.10);
+    --bg:#eaf1ef; --karte:#fff;
+  }
+  /* Papier – neutral und ruhig, wenn die Karte im Vordergrund stehen soll */
+  html[data-theme="papier"]{
+    --green:#6a6350; --green-2:#96907c; --green-3:#eae6dc; --deep:#2e2b24;
+    --ink:#332f27; --muted:#7c776c; --line:#e3ded2; --soft:#f8f6f0; --white:#fff;
+    --amber:#b08430; --red:#a95a48; --blue:#6b8ba0; --akzent:#b08430;
+    --shadow:0 12px 32px rgba(46,43,36,.08);
+    --bg:#f3f0e8; --karte:#fff;
+  }
+  /* Nachtmodus dunkelt nur die Karte ab, die Waldflächen bleiben farbecht */
+  html[data-theme="nacht"] .leaflet-tile{filter:brightness(.62) contrast(1.08) saturate(.75)}
+  html[data-theme="nacht"] .leaflet-popup-content-wrapper,
+  html[data-theme="nacht"] .leaflet-popup-tip{background:var(--karte);color:var(--ink)}
+  html[data-theme="nacht"] .leaflet-control-zoom a{background:var(--karte);color:var(--ink);border-color:var(--line)}
+  html[data-theme="nacht"] .leaflet-control-attribution{background:rgba(27,33,25,.8);color:var(--muted)}
+  html[data-theme="nacht"] .leaflet-control-attribution a{color:var(--green-2)}
+
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg)}
+  button{cursor:pointer;font-family:inherit}
+  .app{min-height:100vh;display:grid;grid-template-rows:auto 1fr auto}
+  footer{border-top:1px solid var(--line);background:var(--white);padding:20px 24px 28px;font-size:11px;color:var(--muted);line-height:1.6}
+  .fuss-inhalt{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:26px;align-items:start;max-width:1400px}
+  @media (max-width:900px){.fuss-inhalt{grid-template-columns:1fr;gap:16px}}
+  footer b,footer strong{color:var(--deep)}
+  .quellen ul{margin:5px 0 0;padding-left:16px}
+  .quellen li{margin-bottom:3px}
+  footer a{color:var(--green);text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  .fuss-links{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+  .fuss-links a{display:inline-block;border:1px solid var(--line);border-radius:8px;padding:6px 11px;font-weight:600;white-space:nowrap}
+
+  header{background:var(--white);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:12px 24px;gap:18px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand-mark{width:36px;height:36px;background:var(--green);border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px;letter-spacing:-1px}
+  .brand-word{font-size:16px;font-weight:800;color:var(--deep)}
+  .brand-sub{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-top:2px}
+  .header-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .theme-switcher{display:flex;align-items:center;gap:4px;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:3px 6px;font-size:11px;color:var(--muted)}
+  .theme-switcher button{border:0;background:transparent;border-radius:999px;padding:4px 9px;font-size:11px;color:var(--muted)}
+  .theme-switcher button.active{background:var(--green);color:#fff;font-weight:600}
+  .status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+  .status i{width:8px;height:8px;border-radius:50%;background:var(--amber);flex:none}
+  .status.ok i{background:var(--green-2)}
+  .status.err i{background:var(--red)}
+  .btn{border:1px solid var(--line);background:var(--white);color:var(--ink);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600}
+  .btn.primary{background:var(--green);border-color:var(--green);color:#fff}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+
+  main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;padding:18px 24px 28px}
+  @media (max-width:1100px){main{grid-template-columns:1fr}}
+
+  .card{background:var(--white);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+  .map-wrap{position:relative;overflow:hidden;min-height:60vh;display:flex;flex-direction:column}
+  .map-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .layer-tabs{display:flex;gap:4px;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:3px}
+  .layer-tabs button{border:0;background:transparent;border-radius:999px;padding:5px 12px;font-size:12px;color:var(--muted)}
+  .layer-tabs button.active{background:var(--white);color:var(--deep);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .mini-pill{font-size:11px;color:var(--muted);background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
+  .baked-note{font-size:11px;color:var(--muted);padding:7px 16px;border-bottom:1px solid var(--line);background:var(--soft)}
+  #map{flex:1;min-height:56vh;background:var(--soft)}
+  .legend{display:flex;align-items:center;gap:14px;padding:10px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);flex-wrap:wrap}
+  .legend .sw{display:inline-flex;align-items:center;gap:6px}
+  .legend .sw b{width:14px;height:10px;border-radius:3px;display:inline-block}
+  .map-overlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--karte);border:1px solid var(--line);border-radius:12px;padding:12px 18px;font-size:13px;color:var(--ink);box-shadow:var(--shadow);z-index:600;display:none;align-items:center;gap:10px;max-width:80%}
+  .map-overlay.show{display:flex}
+  .notice{position:absolute;left:16px;bottom:56px;max-width:min(420px,70%);background:var(--deep);color:#fff;font-size:12px;line-height:1.45;border-radius:10px;padding:10px 13px;z-index:700;opacity:0;transform:translateY(6px);pointer-events:none;transition:.25s}
+  .notice.show{opacity:.96;transform:none}
+  .spinner{width:15px;height:15px;border:2px solid var(--green-3);border-top-color:var(--green);border-radius:50%;animation:spin .9s linear infinite;flex:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  aside{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .panel{padding:16px}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .section-head h2{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.09em;color:var(--deep)}
+  .hint{font-size:11px;color:var(--muted)}
+
+  .score-number{font-size:44px;font-weight:800;line-height:1;color:var(--deep)}
+  .score-unit{font-size:11px;color:var(--muted);margin-top:4px}
+  .score-badge{display:inline-block;margin-top:10px;font-size:11px;font-weight:700;border-radius:999px;padding:5px 11px;background:var(--green-3);color:var(--deep)}
+  .score-track{height:8px;border-radius:999px;background:var(--soft);border:1px solid var(--line);margin-top:12px;overflow:hidden}
+  .score-fill{height:100%;width:0;background:var(--green);transition:width .4s}
+  .score-caption{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.45}
+
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .metric{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px}
+  .metric-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+  .metric-value{font-size:19px;font-weight:700;margin-top:3px}
+  .metric-value small{font-size:11px;font-weight:600;color:var(--muted)}
+
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .day{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:7px 3px;text-align:center;font-size:10px;color:var(--muted);cursor:pointer;transition:.15s}
+  .day:hover{border-color:var(--green-2)}
+  .day.sel{background:var(--green-3);border-color:var(--green-2);color:var(--deep)}
+  .day .ic{font-size:14px;line-height:1.3}
+  .day .idx{font-size:14px;font-weight:800;color:var(--deep)}
+  .day .rn{font-size:9px}
+  .hero{display:flex;align-items:center;gap:14px;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+  .hero-score{font-size:32px;font-weight:800;color:var(--deep);line-height:1}
+  .hero-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .hero-copy{font-size:11px;color:var(--muted);line-height:1.45}
+  .hero-copy strong{display:block;font-size:13px;color:var(--deep);margin-bottom:2px}
+
+  .sel-empty{font-size:12px;color:var(--muted);line-height:1.5}
+  .sel-content{display:none}
+  .sel-content.show{display:block}
+  .sel-name{font-size:16px;font-weight:700;color:var(--deep)}
+  .sel-meta{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+  .sel-score{display:flex;align-items:center;gap:10px;margin-top:12px}
+  .sel-score strong{font-size:28px;font-weight:800;color:var(--deep)}
+  .sel-type{font-size:11px;background:var(--green-3);color:var(--deep);border-radius:999px;padding:4px 10px;font-weight:600}
+  .sel-link{display:inline-block;margin-top:10px;font-size:11px;color:var(--green);text-decoration:none;font-weight:600}
+
+  .arten{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+  .art{border:1px solid var(--line);background:var(--white);color:var(--muted);border-radius:999px;padding:5px 11px;font-size:11px;font-weight:600}
+  .art.aktiv{background:var(--green);border-color:var(--green);color:#fff}
+  .arten-tab{width:100%;border-collapse:collapse;font-size:11px;margin-top:2px}
+  .arten-tab th{text-align:left;font-weight:600;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:4px 3px;border-bottom:1px solid var(--line)}
+  .arten-tab td{padding:5px 3px;border-bottom:1px solid var(--line);cursor:pointer}
+  .arten-tab .z{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+  .arten-tab tr.aktiv td{background:var(--green-3)}
+  .arten-tab tr:hover td{background:var(--soft)}
+  .punkt{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+  .schalter{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer}
+  .top-liste{display:flex;flex-direction:column;gap:5px}
+  .top-zeile{display:grid;grid-template-columns:34px 1fr auto;gap:9px;align-items:center;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:7px 9px;cursor:pointer;transition:.15s}
+  .top-zeile:hover{border-color:var(--green-2)}
+  .top-wert{font-size:16px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums}
+  .top-name{font-size:12px;color:var(--deep);font-weight:600;line-height:1.3}
+  .top-sub{font-size:10px;color:var(--muted)}
+  .top-dist{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .sel-arten{display:flex;flex-wrap:wrap;gap:5px;margin-top:11px}
+  .sel-art{font-size:10px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--soft)}
+  .sel-art b{font-variant-numeric:tabular-nums}
+  .sel-quelle{font-size:10px;color:var(--muted);margin-top:9px;line-height:1.5}
+  .rain-chart{display:flex;align-items:flex-end;gap:3px;height:70px;margin-top:6px}
+  .rain-chart div{flex:1;background:var(--blue);border-radius:3px 3px 0 0;min-height:2px;opacity:.75}
+  .rain-chart div.fut{opacity:.4}
+  .src{font-size:10px;color:var(--muted);margin-top:10px;line-height:1.5}
+  .leaflet-popup-content{margin:12px 14px;font-size:12px;line-height:1.5}
+  .leaflet-popup-content b{color:var(--deep)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="brand-mark">DK</div>
+      <div>
+        <div class="brand-word">Pilzradar Rathenow</div>
+        <div class="brand-sub">OSM-Waldflächen · Live-Wetter</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="theme-switcher"><span>Theme</span>
+        <button class="active" data-theme="herbst">Herbst</button>
+        <button data-theme="kiefer">Kiefer</button>
+        <button data-theme="papier">Papier</button>
+        <button data-theme="nacht">Nacht</button>
+      </div>
+      <div class="status" id="weatherStatus"><i></i><span>Wetter wird geladen …</span></div>
+      <div class="status" id="forestStatus"><i></i><span>Waldflächen werden geladen …</span></div>
+      <button class="btn primary" id="reloadBtn">↻ Neu laden</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card map-wrap">
+      <div class="map-toolbar">
+        <div class="layer-tabs" id="layerTabs">
+          <button class="active" data-layer="basemap">basemap.de</button>
+          <button data-layer="osm">OpenStreetMap</button>
+          <button data-layer="topo">Topografie</button>
+          <button data-layer="sat">Satellit</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="mini-pill" id="forestCount">0 Waldflächen</span>
+          <label class="schalter"><input type="checkbox" id="nsgToggle"> Schutzgebiete</label>
+          <button class="btn" id="gpsBtn">Mein Standort</button>
+          <button class="btn" id="liveBtn">Exakt von OSM laden</button>
+          <button class="btn" id="homeBtn">Rathenow zentrieren</button>
+        </div>
+      </div>
+      <div class="baked-note" id="bakedNote">Waldflächen werden vorbereitet …</div>
+      <div id="map"></div>
+      <div class="map-overlay" id="mapOverlay"><span class="spinner"></span><span id="mapOverlayText">Waldflächen werden von OpenStreetMap geladen …</span></div>
+      <div class="notice" id="notice"></div>
+      <div class="legend">
+        <span>Fundbedingungen je Fläche:</span>
+        <span class="sw"><b style="background:#c96657"></b>0–20</span>
+        <span class="sw"><b style="background:#d9a441"></b>20–40</span>
+        <span class="sw"><b style="background:#c9c24a"></b>40–60</span>
+        <span class="sw"><b style="background:#6fa84d"></b>60–80</span>
+        <span class="sw"><b style="background:#3f7a2e"></b>80–100</span>
+        <span style="margin-left:auto">Nur verifizierte OSM-Geometrien · experimenteller Index</span>
+      </div>
+    </section>
+
+    <aside>
+      <section class="card panel">
+        <div class="section-head"><h2>Fund-Chance heute</h2><span class="hint" id="regionHint">Region Rathenow</span></div>
+        <div class="arten" id="artenWahl">
+          <button class="art aktiv" data-art="gesamt">Beste Art</button>
+        </div>
+        <div class="score-number" id="score">—</div>
+        <div class="score-unit">von 100 Punkten · experimenteller Index</div>
+        <div class="score-badge" id="scoreBadge">Wird geladen</div>
+        <div class="score-track"><div class="score-fill" id="scoreFill"></div></div>
+        <div class="score-caption" id="scoreCaption">Live-Wetterdaten werden geladen.</div>
+      </section>
+
+      <section class="card panel">
+        <div class="section-head"><h2>Wetterlage</h2><span class="hint" id="weatherUpdated">—</span></div>
+        <div class="metrics">
+          <div class="metric"><div class="metric-label">Regen 7 T</div><div class="metric-value" id="mRain7">— <small>mm</small></div></div>
+          <div class="metric"><div class="metric-label">Bodenfeuchte</div><div class="metric-value" id="mSoil">— <small>%</small></div></div>
+          <div class="metric"><div class="metric-label">Boden 6 cm</div><div class="metric-value" id="mBoden">— <small>°C</small></div></div>
+          <div class="metric"><div class="metric-label">Luft jetzt</div><div class="metric-value" id="mTemp">— <small>°C</small></div></div>
+        </div>
+        <div class="section-head" style="margin-top:14px"><h2>Arten nach Waldtyp</h2><span class="hint">Index heute</span></div>
+        <table class="arten-tab">
+          <thead><tr><th>Art</th><th class="z">Laub</th><th class="z">Misch</th><th class="z">Nadel</th></tr></thead>
+          <tbody id="artenTabelle"></tbody>
+        </table>
+        <div class="section-head" style="margin-top:14px"><h2>Regen 14 Tage + Prognose</h2><span class="hint">mm/Tag</span></div>
+        <div class="rain-chart" id="rainChart"></div>
+        <div class="src" id="srcText">Quelle: Open-Meteo (Wetter) · OpenStreetMap/Overpass (Waldflächen)</div>
+      </section>
+
+      <section class="card panel">
+        <div class="section-head"><h2>Fund-Chance · 7 Tage</h2><span class="hint">heute + 6 Tage</span></div>
+        <div class="hero">
+          <div>
+            <div class="hero-label" id="heroLabel">Heute</div>
+            <div class="hero-score" id="heroScore">—</div>
+          </div>
+          <div class="hero-copy"><strong id="heroTitle">Wird geladen</strong><span id="heroSub">Regen wirkt oft mit 2–3 Tagen Verzögerung.</span></div>
+        </div>
+        <div class="week" id="week"></div>
+      </section>
+
+      <section class="card panel">
+        <div class="section-head"><h2>Beste Flächen im Ausschnitt</h2><span class="hint" id="topHint">nach Index</span></div>
+        <div class="top-liste" id="topListe"><div class="hint">Wird berechnet …</div></div>
+      </section>
+
+      <section class="card panel">
+        <div class="section-head"><h2>Ausgewählte Waldfläche</h2></div>
+        <div class="sel-empty" id="selEmpty">Klicke auf eine eingefärbte Waldfläche in der Karte. Alle Flächen stammen unverändert aus OpenStreetMap.</div>
+        <div class="sel-content" id="selContent">
+          <div class="sel-name" id="selName">—</div>
+          <div class="sel-meta" id="selMeta">—</div>
+          <div class="sel-score"><strong id="selScore">—</strong><span class="sel-type" id="selType">—</span></div>
+          <div class="sel-arten" id="selArten"></div>
+          <div class="sel-quelle" id="selQuelle"></div>
+          <a class="sel-link" id="selLink" target="_blank" rel="noopener">In OpenStreetMap ansehen ↗</a>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <footer>
+    <div class="fuss-inhalt">
+      <div>
+        <strong>Pilzradar Rathenow</strong> · experimenteller Bedingungsindex, keine Fundgarantie.
+        Der Index schätzt, ob die Bedingungen stimmen – nicht, ob dort etwas steht.
+        <b>Bestimme jeden Pilz selbst und iss nichts, was du nicht sicher kennst.</b>
+        In Naturschutzgebieten ist das Sammeln in der Regel verboten; die Karte kann sie einblenden,
+        ersetzt aber keine Prüfung vor Ort.
+      </div>
+      <div class="quellen">
+        <b>Quellen</b>
+        <ul>
+          <li>Waldflächen und Schutzgebiete: © OpenStreetMap-Mitwirkende, Daten unter
+            <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noopener">ODbL</a>.
+            Abgerufen über Overpass, Umrisse für die Darstellung vereinfacht.</li>
+          <li>Kartenhintergrund: © <a href="https://basemap.de/" target="_blank" rel="noopener">basemap.de</a> / BKG,
+            OpenTopoMap (CC BY-SA), Luftbild Esri.</li>
+          <li>Baumart (Laub-/Nadelanteil): Copernicus Land Monitoring Service,
+            High Resolution Layer Forest Type 2012, © European Union, EEA.</li>
+          <li>Wetter und Bodendaten: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0).</li>
+          <li>Ortsnamen für Lagebezeichnungen: © OpenStreetMap-Mitwirkende (ODbL).</li>
+        </ul>
+      </div>
+      <div class="fuss-links">
+        <a href="impressum.html">Impressum und Datenschutz</a>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Vorgebackene OSM-Waldflächen für die Kernregion. Fehlt die Datei, lädt die App alles live. -->
+<script src="pilzradar-waldflaechen.js" onerror="window.PILZRADAR_FORESTS=null"></script>
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- Konstanten ---------- */
+  var RATHENOW = [52.6064, 12.3372];
+  var START_ZOOM = 12;   // bei 11 braucht ein breites Fenster 6 Overpass-Abschnitte (~60 s), bei 12 nur 2
+  var MIN_FOREST_ZOOM = 9;           // darunter keine Overpass-Abfrage (zu große Fläche)
+  var MAX_BBOX_DEG = 4.0;            // harte Obergrenze; darüber wird gar nicht abgefragt
+  // Festes, am Nullpunkt ausgerichtetes Raster: eine Zelle ist immer dieselbe, egal wie
+  // die Karte gerade steht. Nur so greift der Zwischenspeicher beim Verschieben.
+  var GRID_LAT = 0.125, GRID_LON = 0.2;   // ca. 14 x 13,5 km je Zelle
+  var MAX_PARALLEL = 2;              // Overpass gibt pro Server 2 Slots frei
+  var MAX_CELLS_PER_MOVE = 12;       // Obergrenze je Kartenbewegung
+  var CACHE_DAYS = 30;
+  var OVERPASS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
+    'https://overpass.osm.jp/api/interpreter'
+  ];
+
+  /* ---------- Hilfsfunktionen ---------- */
+  function $(id){ return document.getElementById(id); }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function num(v){ return (typeof v === 'number' && isFinite(v)) ? v : null; }
+  function sum(arr){ var s=0; for(var i=0;i<arr.length;i++){ if(num(arr[i])!==null) s+=arr[i]; } return s; }
+  function avg(arr){ var v=arr.filter(function(x){return num(x)!==null;}); return v.length? sum(v)/v.length : null; }
+
+  function setStatus(el, state, text){
+    el.className = 'status' + (state ? ' '+state : '');
+    el.lastElementChild.textContent = text;
+  }
+  function overlay(text){
+    if(text){ $('mapOverlayText').textContent = text; $('mapOverlay').classList.add('show'); }
+    else { $('mapOverlay').classList.remove('show'); }
+  }
+  function scoreColor(s){
+    return s<20 ? '#c96657' : s<40 ? '#d9a441' : s<60 ? '#c9c24a' : s<80 ? '#6fa84d' : '#3f7a2e';
+  }
+  function scoreLabel(s){
+    return s>=78 ? 'Sehr gute Bedingungen' : s>=60 ? 'Gute Bedingungen' :
+           s>=42 ? 'Brauchbar' : s>=25 ? 'Schwach' : 'Sehr schwach';
+  }
+
+  /* ---------- Karte ---------- */
+  // preferCanvas: bei mehreren tausend Polygonen deutlich flüssiger als SVG, Klicks funktionieren weiterhin
+  var map = L.map('map', { center: RATHENOW, zoom: START_ZOOM, minZoom: 7, maxZoom: 17,
+                           zoomControl: true, preferCanvas: true });
+  // Kachelquellen: getestet am 17.09.2026, alle ohne API-Key und ohne Wasserzeichen.
+  // NICHT verwendbar: tile.openstreetmap.org (HTTP 403 beim Öffnen per file://)
+  // und basemaps.cartocdn.com (stempelt inzwischen "API KEY REQUIRED" in die Kachel).
+  var baseLayers = {
+    basemap: L.tileLayer('https://sgx.geodatenzentrum.de/wmts_basemapde/tile/1.0.0/de_basemapde_web_raster_farbe/default/GLOBAL_WEBMERCATOR/{z}/{y}/{x}.png', {
+      maxZoom: 18, attribution: '© basemap.de / BKG' }),
+    osm: L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+      maxZoom: 18, attribution: '© OpenStreetMap-Mitwirkende' }),
+    topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      subdomains:'abc', maxZoom: 17,
+      attribution: '© OpenTopoMap, © OpenStreetMap-Mitwirkende' }),
+    sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 18, attribution: 'Luftbild: Esri' })
+  };
+  var currentBase = baseLayers.basemap.addTo(map);
+
+  // Wenn eine Kachelquelle blockt, automatisch auf die nächste wechseln.
+  var tileFallback = ['basemap','osm','topo','sat'], tileErrors = 0;
+  function watchTiles(layer, key){
+    layer.on('tileerror', function(){
+      tileErrors++;
+      if(tileErrors < 8 || key !== currentKey) return;
+      tileErrors = 0;
+      var next = tileFallback[(tileFallback.indexOf(key) + 1) % tileFallback.length];
+      console.warn('Kachelquelle "' + key + '" nicht verfügbar, wechsle zu "' + next + '"');
+      switchBase(next);
+    });
+  }
+  var currentKey = 'basemap';
+  Object.keys(baseLayers).forEach(function(k){ watchTiles(baseLayers[k], k); });
+
+  function switchBase(key){
+    if(!baseLayers[key]) return;
+    map.removeLayer(currentBase);
+    currentKey = key; tileErrors = 0;
+    currentBase = baseLayers[key].addTo(map);
+    Array.prototype.forEach.call(document.querySelectorAll('#layerTabs button'), function(x){
+      x.classList.toggle('active', x.dataset.layer === key);
+    });
+  }
+  L.control.scale({ imperial:false }).addTo(map);
+
+  document.getElementById('layerTabs').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    switchBase(b.dataset.layer);
+  });
+  $('homeBtn').addEventListener('click', function(){ map.setView(RATHENOW, START_ZOOM); });
+
+  function setzeTheme(name){
+    document.querySelectorAll('[data-theme]').forEach(function(x){
+      x.classList.toggle('active', x.dataset.theme === name); });
+    if(name === 'herbst') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', name);
+    try { localStorage.setItem('pilzradar-theme', name); } catch(e){}
+  }
+  document.querySelectorAll('[data-theme]').forEach(function(b){
+    b.addEventListener('click', function(){ setzeTheme(b.dataset.theme); });
+  });
+  try {
+    var gespeichert = localStorage.getItem('pilzradar-theme');
+    if(gespeichert) setzeTheme(gespeichert);
+  } catch(e){}
+
+  /* ---------- Overpass ---------- */
+  function buildQuery(s,w,n,e){
+    var bb = '('+s+','+w+','+n+','+e+')';
+    return '[out:json][timeout:90];(' +
+      'way["landuse"="forest"]'+bb+';' +
+      'way["natural"="wood"]'+bb+';' +
+      'relation["landuse"="forest"]'+bb+';' +
+      'relation["natural"="wood"]'+bb+';' +
+      ');out geom;';
+  }
+
+  // Alle Server gleichzeitig fragen, die erste gültige Antwort gewinnt. Gemessen bringt das
+  // sehr viel: derselbe Abschnitt kam über einen Server in 2,5 s, über einen anderen in 42 s.
+  function fetchOverpass(query){
+    return new Promise(function(resolve, reject){
+      var offen = OVERPASS.length, fertig = false, letzterFehler = null;
+      var ctrl = new AbortController();
+      var timer = setTimeout(function(){ ctrl.abort(); }, 60000);
+      OVERPASS.forEach(function(url){
+        fetch(url, {
+          method:'POST',
+          headers:{'Content-Type':'application/x-www-form-urlencoded'},
+          body:'data='+encodeURIComponent(query),
+          signal: ctrl.signal
+        }).then(function(res){
+          if(!res.ok) throw new Error('HTTP '+res.status);
+          return res.text();
+        }).then(function(txt){
+          if(fertig) return;
+          if(txt.charAt(0) !== '{') throw new Error('Serverfehler statt Daten');
+          var json = JSON.parse(txt);
+          if(!json || !Array.isArray(json.elements)) throw new Error('Unerwartete Antwort');
+          fertig = true; clearTimeout(timer); ctrl.abort();   // die anderen abbrechen
+          resolve(json.elements);
+        }).catch(function(err){
+          if(fertig) return;
+          letzterFehler = err;
+          console.warn('Overpass-Endpunkt fehlgeschlagen:', url, err.message);
+          if(--offen === 0){ clearTimeout(timer); reject(letzterFehler || new Error('Kein Overpass-Server erreichbar')); }
+        });
+      });
+    });
+  }
+
+  /* ---------- Zwischenspeicher (IndexedDB) ---------- */
+  var db = null;
+  function openCache(){
+    return new Promise(function(resolve){
+      if(!window.indexedDB) return resolve(null);
+      var req;
+      try { req = indexedDB.open('pilzradar', 1); } catch(e){ return resolve(null); }
+      req.onupgradeneeded = function(){ req.result.createObjectStore('zellen', {keyPath:'k'}); };
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ resolve(null); };
+    });
+  }
+  function cacheGet(key){
+    return new Promise(function(resolve){
+      if(!db) return resolve(null);
+      try{
+        var r = db.transaction('zellen').objectStore('zellen').get(key);
+        r.onsuccess = function(){
+          var v = r.result;
+          if(!v || (Date.now() - v.t) > CACHE_DAYS*864e5) return resolve(null);
+          resolve(v.f);
+        };
+        r.onerror = function(){ resolve(null); };
+      }catch(e){ resolve(null); }
+    });
+  }
+  function cachePut(key, feats){
+    if(!db) return;
+    try{ db.transaction('zellen','readwrite').objectStore('zellen').put({k:key, t:Date.now(), f:feats}); }
+    catch(e){ /* Zwischenspeicher ist Kür, kein Muss */ }
+  }
+
+  /* ---------- OSM → GeoJSON ---------- */
+  function same(a,b){ return Math.abs(a[0]-b[0])<1e-9 && Math.abs(a[1]-b[1])<1e-9; }
+  function closed(r){ return r.length>3 && same(r[0], r[r.length-1]); }
+
+  function stitch(segments){
+    var segs = segments.filter(function(s){ return s && s.length>1; });
+    var used = segs.map(function(){ return false; });
+    var rings = [];
+    for(var i=0;i<segs.length;i++){
+      if(used[i]) continue;
+      used[i] = true;
+      var ring = segs[i].slice();
+      var grew = true;
+      while(grew && !closed(ring)){
+        grew = false;
+        for(var j=0;j<segs.length;j++){
+          if(used[j]) continue;
+          var s = segs[j], head = ring[0], tail = ring[ring.length-1];
+          if(same(tail, s[0]))                 { ring = ring.concat(s.slice(1)); }
+          else if(same(tail, s[s.length-1]))   { ring = ring.concat(s.slice().reverse().slice(1)); }
+          else if(same(head, s[s.length-1]))   { ring = s.slice(0,-1).concat(ring); }
+          else if(same(head, s[0]))            { ring = s.slice().reverse().slice(0,-1).concat(ring); }
+          else continue;
+          used[j] = true; grew = true; break;
+        }
+      }
+      if(ring.length>=4){
+        if(!closed(ring)) ring.push(ring[0].slice()); // offener Ring: schließen
+        rings.push(ring);
+      }
+    }
+    return rings;
+  }
+
+  function pointInRing(pt, ring){
+    var x = pt[0], y = pt[1], inside = false;
+    for(var i=0, j=ring.length-1; i<ring.length; j=i++){
+      var xi=ring[i][0], yi=ring[i][1], xj=ring[j][0], yj=ring[j][1];
+      if(((yi>y) !== (yj>y)) && (x < (xj-xi)*(y-yi)/((yj-yi)||1e-12) + xi)) inside = !inside;
+    }
+    return inside;
+  }
+
+  function ringAreaKm2(ring){
+    if(!ring || ring.length<4) return 0;
+    var latSum=0, i;
+    for(i=0;i<ring.length;i++) latSum += ring[i][1];
+    var k = Math.cos((latSum/ring.length) * Math.PI/180);
+    var s = 0;
+    for(i=0; i<ring.length-1; i++){
+      s += (ring[i][0]*k)*ring[i+1][1] - (ring[i+1][0]*k)*ring[i][1];
+    }
+    var degKm = Math.PI * 6371.0088 / 180;
+    return Math.abs(s/2) * degKm * degKm;
+  }
+
+  function forestType(tags){
+    var t = tags || {};
+    if(t.natural === 'wood') return 'Wald (natural=wood)';
+    if(t.landuse === 'forest') return 'Forst (landuse=forest)';
+    return 'Wald';
+  }
+  // Laubanteil in Prozent aus dem OSM-Tag, sonst null
+  function leafPctFromTags(tags){
+    var leaf = (tags || {}).leaf_type || '';
+    if(leaf === 'broadleaved') return 100;
+    if(leaf === 'needleleaved') return 0;
+    if(leaf === 'mixed') return 50;
+    return null;
+  }
+  // 0 unbekannt · 1 Laubwald · 2 überwiegend Laub · 3 Mischwald · 4 überwiegend Nadel · 5 Nadelwald
+  function leafLabel(pct, quelle){
+    if(pct === null || pct === undefined || pct < 0) return 'Baumart unbekannt';
+    var n = pct>=85 ? 'Laubwald' : pct>=60 ? 'überwiegend Laub' : pct>=40 ? 'Mischwald'
+          : pct>=15 ? 'überwiegend Nadel' : 'Nadelwald';
+    return n + ' (' + pct + ' % Laub)';
+  }
+  function leafSourceLabel(q){
+    return q===1 ? 'OpenStreetMap-Tag'
+         : q===2 ? 'Copernicus-Waldtypkarte 2012 (20 m)'
+         : q===3 ? 'Copernicus-Waldtypkarte, Nachbarschaft'
+         : 'keine Quelle';
+  }
+
+  function geomToRing(geometry){
+    if(!Array.isArray(geometry)) return null;
+    var r = [];
+    for(var i=0;i<geometry.length;i++){
+      var p = geometry[i];
+      if(!p || typeof p.lat !== 'number' || typeof p.lon !== 'number') return null;
+      r.push([p.lon, p.lat]);
+    }
+    return r.length>1 ? r : null;
+  }
+
+  function elementToFeature(el){
+    var tags = el.tags || {};
+    var polys = [];
+
+    if(el.type === 'way'){
+      var ring = geomToRing(el.geometry);
+      if(!ring || ring.length < 4) return null;
+      if(!closed(ring)) ring.push(ring[0].slice());
+      polys.push([ring]);
+
+    } else if(el.type === 'relation'){
+      var members = el.members || [];
+      var outerSegs = [], innerSegs = [];
+      for(var i=0;i<members.length;i++){
+        var m = members[i];
+        if(m.type !== 'way') continue;
+        var g = geomToRing(m.geometry);
+        if(!g) continue;
+        if(m.role === 'inner') innerSegs.push(g); else outerSegs.push(g);
+      }
+      var outers = stitch(outerSegs);
+      var inners = stitch(innerSegs);
+      if(!outers.length) return null;
+      // Innenringe dem kleinsten passenden Außenring zuordnen
+      var polyList = outers.map(function(o){ return { outer:o, holes:[], area:ringAreaKm2(o) }; });
+      inners.forEach(function(h){
+        var best = null;
+        for(var k=0;k<polyList.length;k++){
+          if(pointInRing(h[0], polyList[k].outer)){
+            if(!best || polyList[k].area < best.area) best = polyList[k];
+          }
+        }
+        if(best) best.holes.push(h);
+      });
+      polys = polyList.map(function(p){ return [p.outer].concat(p.holes); });
+
+    } else {
+      return null;
+    }
+
+    if(!polys.length) return null;
+
+    var area = 0;
+    polys.forEach(function(p){
+      area += ringAreaKm2(p[0]);
+      for(var h=1; h<p.length; h++) area -= ringAreaKm2(p[h]);
+    });
+    area = Math.max(0, area);
+    if(area < 0.0005) return null; // Mikroflächen ausblenden
+
+    var geom = polys.length === 1
+      ? { type:'Polygon', coordinates: polys[0] }
+      : { type:'MultiPolygon', coordinates: polys.map(function(p){ return p; }) };
+
+    return {
+      type:'Feature',
+      geometry: geom,
+      properties: {
+        osmId: el.type + '/' + el.id,
+        name: tags.name || null,
+        type: forestType(tags),
+        operator: tags.operator || null,
+        areaKm2: area,
+        laubPct: leafPctFromTags(tags),
+        ltSrc: tags.leaf_type ? 1 : 0,
+        tags: tags
+      }
+    };
+  }
+
+  /* ---------- Waldflächen-Verwaltung ---------- */
+  var forestIndex = {};                 // osmId -> feature
+  var forestLayer = L.geoJSON(null, {
+    style: styleForest,
+    onEachFeature: function(f, layer){
+      layer.on('click', function(){ selectForest(f); });
+      layer.bindPopup(popupHtml(f));
+    }
+  }).addTo(map);
+
+  function styleForest(f){
+    var s = forestScore(f.properties);
+    return { color: scoreColor(s), weight: 1.2, opacity: .95, fillColor: scoreColor(s), fillOpacity: .55 };
+  }
+
+  function popupHtml(f){
+    var p = f.properties, s = forestScore(p);
+    return '<b>' + waldName(f) + '</b><br>' +
+      '<span style="color:var(--muted)">' + leafLabel(p.laubPct) + ' · ' + p.areaKm2.toFixed(2) + ' km²</span><br>' +
+      'Bedingungsindex: <b>' + s + '/100</b><br>' +
+      '<span style="font-size:10px;color:var(--muted)">OpenStreetMap ' + p.osmId +
+      (p.baked ? ' · Umriss vereinfacht (max. 15 m)' : ' · exakte OSM-Geometrie') +
+      ' · experimenteller Index, keine Fundgarantie</span>';
+  }
+
+  /* ---------- Festes Raster ---------- */
+  var cellState = {};                 // "i_j" -> true, sobald geladen (oder gebacken)
+
+  function cellBox(i,j){
+    return [ +(i*GRID_LAT).toFixed(4), +(j*GRID_LON).toFixed(4),
+             +((i+1)*GRID_LAT).toFixed(4), +((j+1)*GRID_LON).toFixed(4) ];
+  }
+  function cellsIn(s,w,n,e){
+    var out = [];
+    var i0 = Math.floor(s/GRID_LAT), i1 = Math.floor((n - 1e-9)/GRID_LAT);
+    var j0 = Math.floor(w/GRID_LON), j1 = Math.floor((e - 1e-9)/GRID_LON);
+    for(var i=i0; i<=i1; i++) for(var j=j0; j<=j1; j++) out.push([i,j]);
+    return out;
+  }
+  // Alle Rasterzellen, die vollständig in der gebackenen Region liegen, gelten als erledigt
+  function markBakedCells(){
+    var b = BAKED_BBOX, n = 0;
+    cellsIn(b[0], b[1], b[2], b[3]).forEach(function(c){
+      var box = cellBox(c[0], c[1]);
+      if(box[0] >= b[0] && box[1] >= b[1] && box[2] <= b[2] && box[3] <= b[3]){
+        cellState[c[0]+'_'+c[1]] = true; n++;
+      }
+    });
+    return n;
+  }
+
+  function addFeature(f){
+    if(!f || forestIndex[f.properties.osmId]) return false;
+    ergaenzeLaub(f);
+    forestIndex[f.properties.osmId] = f;
+    forestLayer.addData(f);
+    return true;
+  }
+
+  function ingest(elements){
+    var feats = [], skipped = 0;
+    for(var i=0;i<elements.length;i++){
+      var el = elements[i];
+      if(el.type !== 'way' && el.type !== 'relation') continue;
+      var f;
+      try { f = elementToFeature(el); } catch(err){ f = null; }
+      if(!f){ skipped++; continue; }
+      feats.push(f);
+      addFeature(f);
+    }
+    if(skipped) console.info(skipped + ' OSM-Elemente ohne brauchbare Geometrie übersprungen');
+    return feats;
+  }
+
+  function updateCount(){
+    $('forestCount').textContent = Object.keys(forestIndex).length + ' Waldflächen';
+  }
+
+  var laufend = 0, wartend = [], fehlerZuletzt = null, bakedGeladen = false, bakedAlt = false;
+
+  function loadForestsForView(){
+    if(map.getZoom() < MIN_FOREST_ZOOM){
+      setStatus($('forestStatus'), '', 'Zum Laden hineinzoomen (Zoom ≥ ' + MIN_FOREST_ZOOM + ')');
+      overlay(null);
+      return;
+    }
+    var b = map.getBounds().pad(0.05);
+    var s = b.getSouth(), w = b.getWest(), n = b.getNorth(), e = b.getEast();
+    if((n-s) > MAX_BBOX_DEG || (e-w) > MAX_BBOX_DEG){
+      setStatus($('forestStatus'), '', 'Ausschnitt zu groß – bitte hineinzoomen');
+      overlay(null);
+      return;
+    }
+
+    // Kurzschluss: liegt der sichtbare Ausschnitt komplett in der gebackenen Region,
+    // ist nichts zu tun. Ohne das würden Randzellen des Rasters, die nur rechnerisch
+    // über die Region hinausragen, bei jedem Verschieben eine Abfrage auslösen.
+    if(bakedGeladen && s >= BAKED_BBOX[0] && w >= BAKED_BBOX[1] && n <= BAKED_BBOX[2] && e <= BAKED_BBOX[3]){
+      if(!laufend && !wartend.length) fertig();
+      return;
+    }
+
+    var cLat = (s+n)/2, cLon = (w+e)/2;
+    var neu = cellsIn(s,w,n,e).filter(function(c){
+      var k = c[0]+'_'+c[1];
+      if(cellState[k]) return false;
+      var box = cellBox(c[0], c[1]);
+      // Zelle liegt ganz in der gebackenen Region -> Daten sind schon da
+      if(bakedGeladen && box[0] >= BAKED_BBOX[0] && box[1] >= BAKED_BBOX[1] &&
+         box[2] <= BAKED_BBOX[2] && box[3] <= BAKED_BBOX[3]){ cellState[k] = true; return false; }
+      return true;
+    });
+    neu.sort(function(a,b2){     // Mitte zuerst – dort schaut der Nutzer hin
+      var da = Math.pow((a[0]+0.5)*GRID_LAT-cLat,2) + Math.pow((a[1]+0.5)*GRID_LON-cLon,2);
+      var db = Math.pow((b2[0]+0.5)*GRID_LAT-cLat,2) + Math.pow((b2[1]+0.5)*GRID_LON-cLon,2);
+      return da-db;
+    });
+    // Bei weit herausgezoomter Karte nicht das halbe Bundesland abfragen
+    var gekappt = 0;
+    if(neu.length > MAX_CELLS_PER_MOVE){ gekappt = neu.length - MAX_CELLS_PER_MOVE; neu = neu.slice(0, MAX_CELLS_PER_MOVE); }
+
+    neu.forEach(function(c){
+      var k = c[0]+'_'+c[1];
+      if(cellState[k]) return;
+      cellState[k] = 'warte';
+      wartend.push(c);
+    });
+    if(gekappt) console.info(gekappt + ' weiter entfernte Rasterzellen ausgelassen – zum Laden näher heranzoomen');
+    pumpe();
+  }
+
+  function pumpe(){
+    // Stille Nachladung: der große Hinweis erscheint nur, solange noch gar nichts zu sehen ist
+    var leer = Object.keys(forestIndex).length === 0;
+    if(wartend.length || laufend){
+      var offen = wartend.length + laufend;
+      setStatus($('forestStatus'), '', 'Umgebung wird nachgeladen … (' + offen + ')');
+      if(leer) overlay('Waldflächen werden von OpenStreetMap geladen … (' + offen + ' Abschnitte)');
+      else overlay(null);
+    }
+    while(laufend < MAX_PARALLEL && wartend.length){
+      ladeZelle(wartend.shift());
+    }
+    if(!laufend && !wartend.length) fertig();
+  }
+
+  function ladeZelle(c){
+    laufend++;
+    var key = c[0]+'_'+c[1], box = cellBox(c[0], c[1]);
+    cacheGet(key).then(function(cached){
+      if(cached){
+        cached.forEach(addFeature);
+        cellState[key] = true;
+        laufend--; updateCount(); pumpe();
+        return;
+      }
+      return fetchOverpass(buildQuery(box[0], box[1], box[2], box[3])).then(function(elements){
+        var feats = ingest(elements);
+        cachePut(key, feats);
+        cellState[key] = true;
+        laufend--; updateCount(); pumpe();
+      }).catch(function(err){
+        fehlerZuletzt = err;
+        delete cellState[key];        // beim nächsten Versuch erneut probieren
+        console.error('Overpass-Fehler für Zelle ' + key + ':', err);
+        laufend--; pumpe();
+      });
+    });
+  }
+
+  function fertig(){
+    var total = Object.keys(forestIndex).length;
+    updateCount();
+    if(total === 0){
+      if(fehlerZuletzt){
+        setStatus($('forestStatus'), 'err', 'OSM-Waldflächen konnten nicht geladen werden');
+        overlay('OSM-Waldflächen konnten nicht geladen werden (' + fehlerZuletzt.message + '). ' +
+                'Es werden bewusst keine Ersatzflächen angezeigt.');
+        setTimeout(function(){ overlay(null); }, 8000);
+      } else {
+        setStatus($('forestStatus'), 'err', 'Keine OSM-Waldflächen im Ausschnitt');
+        overlay(null);
+      }
+    } else {
+      setStatus($('forestStatus'), fehlerZuletzt ? '' : 'ok',
+        total + ' Waldflächen' + (fehlerZuletzt ? ' · Nachladen teilweise fehlgeschlagen' : ''));
+      overlay(null);
+    }
+  }
+
+  var moveTimer = null;
+  map.on('moveend zoomend', function(){
+    clearTimeout(moveTimer);
+    moveTimer = setTimeout(function(){
+      loadForestsForView();
+      loadNSG();
+      renderTopListe();
+    }, 700);
+  });
+
+  /* ---------- Auswahl ---------- */
+  function selectForest(f){
+    var p = f.properties, s = forestScore(p);
+    var laub = (p.laubPct === null || p.laubPct === undefined) ? null : p.laubPct;
+    $('selEmpty').style.display = 'none';
+    $('selContent').classList.add('show');
+    $('selName').textContent = waldName(f);
+    $('selMeta').textContent = p.areaKm2.toFixed(2) + ' km² · ' + leafLabel(laub) +
+      (p.operator ? ' · ' + p.operator : '') + ' · ' + entfernungText(f) +
+      (p.name ? '' : ' · Lagebezeichnung, in OSM unbenannt');
+    $('selScore').textContent = s;
+    $('selScore').style.color = scoreColor(s);
+    $('selType').textContent = p.type;
+
+    // Aufschlüsselung je Art für genau diesen Bestand
+    $('selArten').innerHTML = weather ? ARTEN.map(function(a){
+      var v = artIndex(weather.days, todayIndex, a, laub);
+      return '<span class="sel-art"><span class="punkt" style="background:' + a.farbe + '"></span>' +
+             a.name + ' <b style="color:' + scoreColor(v) + '">' + v + '</b></span>';
+    }).join('') : '';
+
+    var beste = weather && laub !== null ? besteArt(weather.days, todayIndex, laub) : null;
+    $('selQuelle').innerHTML =
+      (beste ? 'Beste Art hier: <b>' + beste.art.name + '</b>. ' + beste.art.hinweis + '<br>' : '') +
+      'Baumart: ' + leafSourceLabel(p.ltSrc) + ' · Geometrie: OpenStreetMap ' + p.osmId +
+      (p.baked ? ' (Umriss vereinfacht)' : '');
+    $('selLink').href = 'https://www.openstreetmap.org/' + p.osmId;
+  }
+
+  /* ---------- Standort und Entfernung ---------- */
+  var meinOrt = null, ortMarker = null;
+
+  function distanzKm(aLat, aLon, bLat, bLon){
+    var R = 6371.0088, p = Math.PI/180;
+    var dLat = (bLat-aLat)*p, dLon = (bLon-aLon)*p;
+    var x = Math.sin(dLat/2)*Math.sin(dLat/2) +
+            Math.cos(aLat*p)*Math.cos(bLat*p)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return 2*R*Math.asin(Math.min(1, Math.sqrt(x)));
+  }
+  function featureMitte(f){
+    var b = L.geoJSON(f).getBounds().getCenter();
+    return [b.lat, b.lng];
+  }
+  function entfernungVon(){ return meinOrt || RATHENOW; }
+  function entfernungKm(f){
+    var m = featureMitte(f), o = entfernungVon();
+    return distanzKm(o[0], o[1], m[0], m[1]);
+  }
+  function entfernungText(f){
+    var d = entfernungKm(f);
+    return d.toFixed(1) + ' km ' + (meinOrt ? 'von deinem Standort' : 'von Rathenow');
+  }
+
+  $('gpsBtn').addEventListener('click', function(){
+    if(!navigator.geolocation){ setNotice('Standortbestimmung wird vom Browser nicht angeboten.'); return; }
+    $('gpsBtn').textContent = 'Standort wird bestimmt …';
+    navigator.geolocation.getCurrentPosition(function(pos){
+      meinOrt = [pos.coords.latitude, pos.coords.longitude];
+      if(ortMarker) map.removeLayer(ortMarker);
+      ortMarker = L.circleMarker(meinOrt, { radius:7, color:'#1f6fb2', weight:3,
+        fillColor:'#6d9fbd', fillOpacity:.9 }).addTo(map)
+        .bindTooltip('Dein Standort (±' + Math.round(pos.coords.accuracy) + ' m)');
+      map.setView(meinOrt, Math.max(map.getZoom(), 12));
+      $('gpsBtn').textContent = 'Standort aktualisieren';
+      renderTopListe();
+    }, function(err){
+      $('gpsBtn').textContent = 'Mein Standort';
+      setNotice('Standort nicht verfügbar: ' + err.message);
+    }, { enableHighAccuracy:true, timeout:15000, maximumAge:60000 });
+  });
+
+  /* ---------- Beste Flächen im Ausschnitt ---------- */
+  function renderTopListe(){
+    if(!weather){ return; }
+    var b = map.getBounds(), liste = [];
+    Object.keys(forestIndex).forEach(function(k){
+      var f = forestIndex[k];
+      if(f.properties.areaKm2 < 0.05) return;        // Kleinstparzellen überspringen
+      var m = featureMitte(f);
+      if(!b.contains(L.latLng(m[0], m[1]))) return;
+      liste.push({ f:f, wert:forestScore(f.properties), mitte:m,
+                   dist:distanzKm(entfernungVon()[0], entfernungVon()[1], m[0], m[1]) });
+    });
+    liste.sort(function(x,y){ return y.wert - x.wert || x.dist - y.dist; });
+    var top = liste.slice(0, 8);
+    $('topHint').textContent = liste.length + ' Flächen ab 5 ha';
+    if(!top.length){ $('topListe').innerHTML = '<div class="hint">Keine Waldfläche im Ausschnitt.</div>'; return; }
+    $('topListe').innerHTML = top.map(function(t, i){
+      var p = t.f.properties;
+      var laub = (p.laubPct === null || p.laubPct === undefined) ? null : p.laubPct;
+      var art = besteArt(weather.days, todayIndex, laub).art;
+      return '<div class="top-zeile" data-id="' + p.osmId + '">' +
+        '<div class="top-wert" style="color:' + scoreColor(t.wert) + '">' + t.wert + '</div>' +
+        '<div><div class="top-name">' + waldName(t.f) + '</div>' +
+        '<div class="top-sub">' + p.areaKm2.toFixed(1) + ' km² · ' +
+        (laub === null ? 'Baumart unbekannt' : leafLabel(laub)) + ' · ' + art.kurz + '</div></div>' +
+        '<div class="top-dist">' + t.dist.toFixed(1) + ' km</div></div>';
+    }).join('');
+  }
+
+  $('topListe').addEventListener('click', function(e){
+    var z = e.target.closest('.top-zeile'); if(!z) return;
+    var f = forestIndex[z.dataset.id]; if(!f) return;
+    map.fitBounds(L.geoJSON(f).getBounds(), { maxZoom:14 });
+    selectForest(f);
+  });
+
+  /* ---------- Schutzgebiete ---------- */
+  // Wichtig: In Naturschutzgebieten ist das Sammeln verboten oder stark eingeschränkt,
+  // in Landschaftsschutzgebieten meist erlaubt. Deshalb werden beide getrennt dargestellt.
+  var nsgLayer = L.geoJSON(null, {
+    style: function(f){
+      var streng = f.properties.streng;
+      return { color: streng ? '#c0392b' : '#b7791f', weight:2, opacity:.9,
+               dashArray: streng ? null : '6 4', fill:false };
+    },
+    onEachFeature: function(f, l){
+      var p = f.properties;
+      l.bindPopup('<b>' + (p.name || 'Schutzgebiet') + '</b><br>' + p.art + '<br>' +
+        '<span style="font-size:10px;color:#6d786f">' +
+        (p.streng ? 'Sammeln in der Regel verboten oder genehmigungspflichtig.'
+                  : 'Sammeln meist erlaubt – örtliche Regeln beachten.') +
+        '<br>Quelle: OpenStreetMap ' + p.osmId + '</span>');
+    }
+  });
+  var nsgGeladen = {};
+
+  function nsgQuery(s,w,n,e){
+    var bb = '('+s+','+w+','+n+','+e+')';
+    return '[out:json][timeout:90];(' +
+      'way["leisure"="nature_reserve"]'+bb+';relation["leisure"="nature_reserve"]'+bb+';' +
+      'way["boundary"="protected_area"]'+bb+';relation["boundary"="protected_area"]'+bb+';' +
+      ');out geom;';
+  }
+  function istStreng(tags){
+    var t = tags || {};
+    if(t.leisure === 'nature_reserve') return true;
+    var titel = (t.protection_title || '') + ' ' + (t.designation || '');
+    if(/Landschaftsschutz/i.test(titel)) return false;
+    if(/Naturschutzgebiet|Nationalpark|Naturdenkmal|Bannwald/i.test(titel)) return true;
+    var k = parseInt(t.protect_class, 10);
+    if(!isNaN(k)) return k <= 4;
+    return false;
+  }
+  function schutzArt(tags){
+    var t = tags || {};
+    return t.protection_title || t.designation ||
+           (t.leisure === 'nature_reserve' ? 'Naturschutzgebiet' : 'Schutzgebiet');
+  }
+
+  function loadNSG(){
+    if(!$('nsgToggle').checked) return;
+    var b = map.getBounds().pad(0.05);
+    var cells = cellsIn(b.getSouth(), b.getWest(), b.getNorth(), b.getEast())
+                .filter(function(c){ return !nsgGeladen['n'+c[0]+'_'+c[1]]; })
+                .slice(0, 6);
+    if(!cells.length) return;
+    setStatus($('forestStatus'), '', 'Schutzgebiete werden geladen …');
+    var offen = cells.length;
+    cells.forEach(function(c){
+      var box = cellBox(c[0], c[1]);
+      nsgGeladen['n'+c[0]+'_'+c[1]] = true;
+      fetchOverpass(nsgQuery(box[0], box[1], box[2], box[3])).then(function(els){
+        els.forEach(function(el){
+          if(el.type !== 'way' && el.type !== 'relation') return;
+          var f; try { f = elementToFeature(el); } catch(e){ f = null; }
+          if(!f) return;
+          var id = el.type + '/' + el.id;
+          if(nsgGeladen[id]) return;
+          nsgGeladen[id] = true;
+          f.properties.streng = istStreng(el.tags);
+          f.properties.art = schutzArt(el.tags);
+          f.properties.osmId = id;
+          nsgLayer.addData(f);
+        });
+        if(--offen === 0) updateCount();
+      }).catch(function(err){
+        delete nsgGeladen['n'+c[0]+'_'+c[1]];
+        console.error('Schutzgebiete konnten nicht geladen werden:', err);
+        if(--offen === 0) setNotice('Schutzgebiete konnten nicht geladen werden.');
+      });
+    });
+  }
+
+  $('nsgToggle').addEventListener('change', function(){
+    if(this.checked){ nsgLayer.addTo(map); loadNSG();
+      setNotice('Rot umrandet: Sammeln in der Regel verboten. Gestrichelt: Landschaftsschutz, meist erlaubt.'); }
+    else { map.removeLayer(nsgLayer); }
+  });
+
+  /* ---------- Artenauswahl ---------- */
+  function baueArtenWahl(){
+    $('artenWahl').innerHTML = '<button class="art aktiv" data-art="gesamt">Beste Art</button>' +
+      ARTEN.map(function(a){
+        return '<button class="art" data-art="' + a.id + '">' +
+               '<span class="punkt" style="background:' + a.farbe + '"></span>' + a.name + '</button>';
+      }).join('');
+  }
+  function setzeArt(id){
+    aktiveArt = id;
+    Array.prototype.forEach.call($('artenWahl').children, function(b){
+      b.classList.toggle('aktiv', b.dataset.art === id);
+    });
+    if(weather){ renderWeather(); }
+    refreshForestStyles();
+    renderTopListe();
+  }
+  $('artenWahl').addEventListener('click', function(e){
+    var b = e.target.closest('.art'); if(!b) return;
+    setzeArt(b.dataset.art);
+  });
+  $('artenTabelle').addEventListener('click', function(e){
+    var tr = e.target.closest('tr'); if(!tr || !tr.dataset.art) return;
+    setzeArt(aktiveArt === tr.dataset.art ? 'gesamt' : tr.dataset.art);
+  });
+
+  function setNotice(txt){
+    var n = $('notice');
+    if(!n) { console.info(txt); return; }
+    n.textContent = txt; n.classList.add('show');
+    clearTimeout(window.noticeTimer);
+    window.noticeTimer = setTimeout(function(){ n.classList.remove('show'); }, 5000);
+  }
+
+  /* ---------- Wetter ---------- */
+  var weather = null;            // { days:[{date,rain,tmax,tmin,code,soil}], idx heute }
+  var todayIndex = 0;
+
+  /* ---------- Artenprofile ----------
+     Die Werte sind Erfahrungswerte aus der Pilzliteratur, keine gemessenen Konstanten.
+     monat: relative Erwartung Januar..Dezember.
+     lagMitte/lagBreite: wann der Regen wirkt, in Tagen vor dem Stichtag.
+     bedarf: gewichteter Regen in mm/Tag für volle Punktzahl.
+     bodenOpt/bodenTol: Bodentemperatur in 6 cm Tiefe.
+     laubOpt/laubTol: bevorzugter Laubanteil des Bestands in Prozent.            */
+  var ARTEN = [
+    { id:'steinpilz', name:'Steinpilz', kurz:'Stein', farbe:'#8a5a2b',
+      monat:[0,0,0,0,.05,.30,.65,.95,1,.80,.25,0],
+      lagMitte:12, lagBreite:5, bedarf:2.2,
+      bodenOpt:15, bodenTol:5.5, laubOpt:45, laubTol:45, frostEmpfindlich:true,
+      hinweis:'Mykorrhiza mit Fichte, Kiefer, Buche und Eiche – daher in beiden Waldtypen.' },
+    { id:'marone', name:'Maronenröhrling', kurz:'Marone', farbe:'#6b4423',
+      monat:[0,0,0,0,.05,.25,.55,.85,1,1,.55,.05],
+      lagMitte:11, lagBreite:5, bedarf:1.8,
+      bodenOpt:13, bodenTol:6, laubOpt:12, laubTol:32, frostEmpfindlich:true,
+      hinweis:'Klarer Nadelwaldpilz, vor allem unter Kiefer und Fichte. In Brandenburg der Brotpilz.' },
+    { id:'pfifferling', name:'Pfifferling', kurz:'Pfiff.', farbe:'#d9a441',
+      monat:[0,0,0,0,.10,.55,.90,1,.90,.55,.10,0],
+      lagMitte:9, lagBreite:4, bedarf:2.6,
+      bodenOpt:16, bodenTol:5, laubOpt:35, laubTol:40, frostEmpfindlich:true,
+      hinweis:'Braucht gleichmäßige Feuchte, gern moosige Stellen. Reagiert schneller auf Regen als Röhrlinge.' }
+  ];
+  var artById = {};
+  ARTEN.forEach(function(a){ artById[a.id] = a; });
+  var aktiveArt = 'gesamt';        // 'gesamt' = beste Art des Tages
+
+  function glocke(wert, opt, tol){
+    var d = (wert - opt) / tol;
+    return Math.exp(-0.5 * d * d);
+  }
+
+  // Gewichteter Regen-Nachlauf statt flacher 7-/14-Tage-Summe:
+  // Regen wirkt nicht am Tag des Niederschlags, sondern rund 8–14 Tage später.
+  function regenWirksam(days, i, art){
+    var summe = 0, gew = 0;
+    for(var d = 0; d <= 25; d++){
+      var k = i - d;
+      if(k < 0) break;
+      var w = Math.exp(-0.5 * Math.pow((d - art.lagMitte) / art.lagBreite, 2));
+      summe += (days[k].rain || 0) * w;
+      gew += w;
+    }
+    return gew ? summe / gew : 0;      // mm pro Tag, nachlaufgewichtet
+  }
+
+  // Erster harter Frost beendet für die meisten Arten die Saison
+  function frostFaktor(days, i, art){
+    if(!art.frostEmpfindlich) return 1;
+    var haerteste = 99;
+    for(var k = Math.max(0, i-4); k <= i; k++){
+      if(num(days[k].tmin) !== null && days[k].tmin < haerteste) haerteste = days[k].tmin;
+    }
+    if(haerteste <= -4) return 0.10;
+    if(haerteste <= -1) return 0.45;
+    if(haerteste <= 1.5) return 0.80;
+    return 1;
+  }
+
+  function monatsFaktor(art, dateStr){
+    var dt = new Date(dateStr + 'T12:00:00');
+    var m = dt.getMonth(), tag = dt.getDate();
+    var tage = new Date(dt.getFullYear(), m+1, 0).getDate();
+    var t = (tag - 1) / tage;                      // linear zum Folgemonat überblenden
+    return art.monat[m] * (1-t) + art.monat[(m+1)%12] * t;
+  }
+
+  // Wetteranteil eines Tages für eine Art, ohne Waldbezug (0..1)
+  function wetterAnteil(days, i, art){
+    var d = days[i];
+    var regen = clamp(regenWirksam(days, i, art) / art.bedarf, 0, 1);
+    var feuchte = d.soil === null ? regen : clamp((d.soil - 8) / 22, 0, 1);
+    var bodenT = d.bodenT !== null && d.bodenT !== undefined ? d.bodenT
+               : (num(d.tmax) !== null ? (d.tmax + d.tmin)/2 : 12);
+    var boden = glocke(bodenT, art.bodenOpt, art.bodenTol);
+    var mix = 0.45*regen + 0.30*feuchte + 0.25*boden;
+    // Anhaltende Trockenheit schlägt alles andere. Ohne diese Dämpfung käme eine
+    // vier Wochen trockene Lage allein über Bodenwärme noch auf rund 50 Punkte.
+    var duerre = regen >= 0.35 ? 1 : 0.40 + 0.60 * (regen / 0.35);
+    return mix * duerre;
+  }
+
+  // Index einer Art für einen Tag; laubPct = Laubanteil des Bestands oder null
+  function artIndex(days, i, art, laubPct){
+    if(!days || !days[i]) return 0;
+    var basis = wetterAnteil(days, i, art) * monatsFaktor(art, days[i].date) * frostFaktor(days, i, art);
+    var wirt = (laubPct === null || laubPct === undefined)
+             ? 0.82                                   // unbekannter Bestand: gedämpft, nicht geraten
+             : 0.45 + 0.55 * glocke(laubPct, art.laubOpt, art.laubTol);
+    return clamp(Math.round(100 * basis * wirt), 0, 100);
+  }
+
+  // Bester Wert über alle Arten, plus welche Art es war
+  function besteArt(days, i, laubPct){
+    var best = null;
+    ARTEN.forEach(function(a){
+      var v = artIndex(days, i, a, laubPct);
+      if(!best || v > best.wert) best = { wert:v, art:a };
+    });
+    return best || { wert:0, art:ARTEN[0] };
+  }
+
+  function tagesIndex(days, i, laubPct){
+    if(aktiveArt === 'gesamt') return besteArt(days, i, laubPct).wert;
+    return artIndex(days, i, artById[aktiveArt], laubPct);
+  }
+
+  function forestScore(p){
+    if(!weather) return 0;
+    var laub = (p.laubPct === null || p.laubPct === undefined) ? null : p.laubPct;
+    var v = tagesIndex(weather.days, todayIndex, laub);
+    // Größe hilft ein wenig: mehr Fläche, mehr Gelegenheiten
+    var groesse = clamp(Math.round(Math.log10(Math.max(0.05, p.areaKm2)) * 2.5) + 1, -3, 4);
+    return clamp(v + groesse, 0, 100);
+  }
+
+  var WCODE = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',
+    61:'🌦️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'❄️',77:'❄️',80:'🌦️',81:'🌧️',82:'⛈️',
+    85:'🌨️',86:'❄️',95:'⛈️',96:'⛈️',99:'⛈️'};
+
+  function loadWeather(){
+    setStatus($('weatherStatus'), '', 'Wetter wird geladen …');
+    var url = 'https://api.open-meteo.com/v1/forecast' +
+      '?latitude=' + RATHENOW[0] + '&longitude=' + RATHENOW[1] +
+      '&daily=precipitation_sum,temperature_2m_max,temperature_2m_min,weather_code' +
+      '&hourly=soil_moisture_3_to_9cm,soil_temperature_6cm' +
+      '&current=temperature_2m,relative_humidity_2m' +
+      '&past_days=35&forecast_days=7&timezone=Europe%2FBerlin';
+
+    return fetch(url).then(function(r){
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function(j){
+      if(!j.daily || !Array.isArray(j.daily.time)) throw new Error('Unerwartete Wetterantwort');
+
+      // Bodenfeuchte und Bodentemperatur je Tag mitteln
+      var soilByDay = {}, tempByDay = {};
+      if(j.hourly && Array.isArray(j.hourly.time)){
+        j.hourly.time.forEach(function(ts, i){
+          var d = ts.slice(0,10);
+          var v = j.hourly.soil_moisture_3_to_9cm ? j.hourly.soil_moisture_3_to_9cm[i] : null;
+          if(num(v) !== null) (soilByDay[d] = soilByDay[d] || []).push(v * 100);
+          var t = j.hourly.soil_temperature_6cm ? j.hourly.soil_temperature_6cm[i] : null;
+          if(num(t) !== null) (tempByDay[d] = tempByDay[d] || []).push(t);
+        });
+      }
+
+      var days = j.daily.time.map(function(d, i){
+        return {
+          date: d,
+          rain: num(j.daily.precipitation_sum[i]) || 0,
+          tmax: num(j.daily.temperature_2m_max[i]),
+          tmin: num(j.daily.temperature_2m_min[i]),
+          code: j.daily.weather_code ? j.daily.weather_code[i] : 0,
+          soil: soilByDay[d] ? avg(soilByDay[d]) : null,
+          bodenT: tempByDay[d] ? avg(tempByDay[d]) : null
+        };
+      });
+
+      // Regensummen nur noch zur Anzeige; der Index nutzt den gewichteten Nachlauf
+      days.forEach(function(d, i){
+        var r7 = 0, r14 = 0, k;
+        for(k = Math.max(0, i-6); k <= i; k++) r7 += days[k].rain;
+        for(k = Math.max(0, i-13); k <= i; k++) r14 += days[k].rain;
+        d.rain7 = r7; d.rain14 = r14;
+      });
+
+      var todayStr = new Date().toISOString().slice(0,10);
+      var ti = days.findIndex(function(d){ return d.date === todayStr; });
+      if(ti < 0) ti = Math.max(0, days.length - 7);
+
+      weather = { days: days, todayIdx: ti, current: j.current || null, generated: new Date() };
+      todayIndex = ti;
+      renderWeather();
+      setStatus($('weatherStatus'), 'ok', 'Live-Wetter geladen');
+    }).catch(function(err){
+      console.error('Wetterfehler:', err);
+      setStatus($('weatherStatus'), 'err', 'Wetterdaten nicht verfügbar');
+      $('scoreCaption').textContent = 'Live-Wetterdaten konnten nicht geladen werden. Es werden keine Ersatzwerte angezeigt.';
+    });
+  }
+
+  function renderWeather(){
+    var D = weather.days, ti = weather.todayIdx, d = D[ti];
+    var idx = tagesIndex(D, todayIndex, null);
+    var dSel = D[todayIndex] || d;
+
+    $('score').textContent = idx;
+    $('scoreFill').style.width = idx + '%';
+    $('scoreFill').style.background = scoreColor(idx);
+    $('scoreBadge').textContent = scoreLabel(idx);
+
+    // Erklärung, woher der Wert kommt
+    var art = aktiveArt === 'gesamt' ? besteArt(D, todayIndex, null).art : artById[aktiveArt];
+    var rw = regenWirksam(D, todayIndex, art);
+    var ff = frostFaktor(D, todayIndex, art);
+    $('scoreCaption').innerHTML =
+      'Wirksamer Regen <b>' + rw.toFixed(1) + ' mm/Tag</b> (Nachlauf ' + art.lagMitte + ' ± ' +
+      art.lagBreite + ' Tage) · Bodentemperatur ' +
+      (dSel.bodenT === null ? '—' : Math.round(dSel.bodenT) + ' °C') +
+      ' · Saison ' + Math.round(monatsFaktor(art, dSel.date)*100) + ' %' +
+      (ff < 1 ? ' · <b style="color:var(--red)">Frost dämpft auf ' + Math.round(ff*100) + ' %</b>' : '');
+
+    $('mRain7').innerHTML = Math.round(dSel.rain7) + ' <small>mm</small>';
+    $('mSoil').innerHTML = (dSel.soil === null ? '—' : Math.round(dSel.soil)) + ' <small>%</small>';
+    $('mBoden').innerHTML = (dSel.bodenT === null ? '—' : Math.round(dSel.bodenT)) + ' <small>°C</small>';
+    var cur = weather.current && num(weather.current.temperature_2m) !== null
+      ? Math.round(weather.current.temperature_2m)
+      : (num(d.tmax) !== null ? Math.round((d.tmax + d.tmin)/2) : '—');
+    $('mTemp').innerHTML = cur + ' <small>°C</small>';
+    $('weatherUpdated').textContent = new Intl.DateTimeFormat('de-DE',
+      { hour:'2-digit', minute:'2-digit' }).format(weather.generated) + ' Uhr';
+    renderArtenTabelle();
+
+    // Regen-Chart: 14 Tage rückwärts + 7 Prognosetage
+    var from = Math.max(0, weather.todayIdx - 13);
+    var slice = weather.days.slice(from, weather.todayIdx + 7);
+    var maxR = Math.max.apply(null, slice.map(function(x){ return x.rain; }).concat([5]));
+    $('rainChart').innerHTML = slice.map(function(x, i){
+      var h = Math.max(2, Math.round(x.rain / maxR * 68));
+      var fut = (from + i) > weather.todayIdx ? ' class="fut"' : '';
+      return '<div' + fut + ' style="height:' + h + 'px" title="' + x.date + ': ' +
+        x.rain.toFixed(1) + ' mm"></div>';
+    }).join('');
+
+    // 7-Tage-Streifen
+    var gewaehlt = todayIndex - weather.todayIdx;
+    $('week').innerHTML = weather.days.slice(weather.todayIdx, weather.todayIdx + 7).map(function(x, i){
+      var dt = new Date(x.date + 'T12:00:00');
+      var wd = new Intl.DateTimeFormat('de-DE', { weekday:'short' }).format(dt);
+      var v = tagesIndex(weather.days, weather.todayIdx + i, null);
+      return '<div class="day' + (i===gewaehlt?' sel':'') + '" data-i="' + i + '">' +
+        '<div>' + (i===0 ? 'Heute' : wd) + '</div>' +
+        '<div class="ic">' + (WCODE[x.code] || '•') + '</div>' +
+        '<div class="idx" style="color:' + scoreColor(v) + '">' + v + '</div>' +
+        '<div class="rn">' + Math.round(x.rain) + ' mm</div>' +
+        '</div>';
+    }).join('');
+
+    selectDay(gewaehlt >= 0 && gewaehlt < 7 ? gewaehlt : 0);
+  }
+
+  // Tabelle: welche Art hat heute wo die besten Karten
+  function renderArtenTabelle(){
+    if(!weather) return;
+    var D = weather.days, i = todayIndex;
+    $('artenTabelle').innerHTML = ARTEN.map(function(a){
+      var laub = artIndex(D, i, a, 100), nadel = artIndex(D, i, a, 0), misch = artIndex(D, i, a, 50);
+      var best = Math.max(laub, nadel, misch);
+      return '<tr' + (aktiveArt===a.id ? ' class="aktiv"' : '') + ' data-art="' + a.id + '">' +
+        '<td><span class="punkt" style="background:' + a.farbe + '"></span>' + a.name + '</td>' +
+        '<td class="z" style="color:' + scoreColor(laub) + '">' + laub + '</td>' +
+        '<td class="z" style="color:' + scoreColor(misch) + '">' + misch + '</td>' +
+        '<td class="z" style="color:' + scoreColor(nadel) + '">' + nadel + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  $('week').addEventListener('click', function(e){
+    var el = e.target.closest('.day'); if(!el) return;
+    selectDay(+el.dataset.i);
+  });
+
+  function selectDay(i){
+    if(!weather) return;
+    var d = weather.days[weather.todayIdx + i];
+    if(!d) return;
+    todayIndex = weather.todayIdx + i;
+    Array.prototype.forEach.call($('week').children, function(c, n){ c.classList.toggle('sel', n === i); });
+    var dt = new Date(d.date + 'T12:00:00');
+    var v = tagesIndex(weather.days, todayIndex, null);
+    var art = aktiveArt === 'gesamt' ? besteArt(weather.days, todayIndex, null).art : artById[aktiveArt];
+    $('heroLabel').textContent = i === 0 ? 'Heute' :
+      new Intl.DateTimeFormat('de-DE', { weekday:'long', day:'2-digit', month:'2-digit' }).format(dt);
+    $('heroScore').textContent = v;
+    $('heroScore').style.color = scoreColor(v);
+    $('heroTitle').textContent = scoreLabel(v) +
+      (aktiveArt === 'gesamt' ? ' · beste Art: ' + art.name : '');
+    $('heroSub').textContent = (WCODE[d.code] || '') + ' ' +
+      (num(d.tmax) !== null ? Math.round(d.tmax) + '° / ' + Math.round(d.tmin) + '°' : '') +
+      ' · ' + d.rain.toFixed(1) + ' mm Regen · Boden ' +
+      (d.bodenT === null ? '—' : Math.round(d.bodenT) + '°C');
+    renderArtenTabelle();
+    refreshForestStyles();
+    renderTopListe();
+  }
+
+  function refreshForestStyles(){
+    forestLayer.eachLayer(function(l){
+      if(l.feature){
+        l.setStyle(styleForest(l.feature));
+        l.setPopupContent(popupHtml(l.feature));
+      }
+    });
+  }
+
+  /* ---------- Ortsnamen für die Lagebezeichnung ----------
+     534 Orte aus OpenStreetMap (place=city/town/village/hamlet/suburb) im Umkreis.
+     Format: Name~Breite~Länge~Rang, Rang 0 = Stadt … 4 = Weiler.
+     Damit bekommt eine in OSM unbenannte Waldfläche eine Lagebezeichnung wie
+     "Wald bei Grütz" statt "Unbenannte Waldfläche". Das ist eine Beschreibung,
+     kein erfundener Eigenname – die Auswahlkarte weist darauf hin.                */
+  var ORTE_ROH = 'Friesack~52.7395~12.5783~1;Genthin~52.4064~12.1562~1;Sandau (Elbe)~52.7891~12.048~1;Neustadt (Dosse)~52.8551~12.4405~1;Fehrbellin~52.8142~12.7652~1;Werben (Elbe)~52.8612~11.9822~1;Wusterhausen/Dosse~52.8902~12.4618~1;Arneburg~52.6745~12.0035~1;Brandenburg an der Havel~52.4108~12.5498~1;Jerichow~52.4976~12.0258~1;Tangermünde~52.5431~11.9723~1;Rhinow~52.7509~12.3411~1;Havelberg~52.825~12.0742~1;Premnitz~52.5281~12.3395~1;Rathenow~52.6064~12.3382~1;Hohennauen~52.6671~12.3371~2;Radewege~52.4794~12.5741~2;Neuendorf~52.395~12.5072~2;Görden~52.4254~12.5178~2;Hohenstücken~52.4348~12.5215~2;Pritzerbe~52.4982~12.4543~2;Kirchmöser Ost~52.3817~12.4374~2;Kirchmöser Dorf~52.3751~12.4264~2;Kirchmöser West~52.395~12.4077~2;Rathenow West~52.6068~12.3136~2;Nordsiedlung~52.6216~12.348~2;Heidefeld~52.5732~12.3338~2;Reihereck~52.9059~12.4501~2;Wassersuppe~52.6721~12.3784~2;Schönholz~52.7198~12.4117~2;Neu Friedrichsdorf~52.6039~12.3759~2;Waldsiedlung~52.6151~12.362~2;Bütow~52.9158~12.7812~2;Neuderben~52.3939~11.9947~2;Hohenkamern~52.7419~12.1234~2;Parey Schleuse~52.4033~11.9779~2;Quenzsiedlung~52.4109~12.5003~2;Buhnenhaus~52.3865~12.4967~2;Heidekrug~52.4161~12.4816~2;Kaltenhausen~52.4257~12.4353~2;Kolonie Görden~52.4332~12.4955~2;Brielow~52.4617~12.5371~2;Ausbau Döberitz~52.5185~12.3912~2;Siedlung Wusterwitz~52.3889~12.3701~2;Plänitz~52.878~12.4073~2;Steckelsdorf~52.6057~12.2836~3;Bamme~52.5827~12.4325~3;Marzahne~52.5129~12.5343~3;Ferchesar~52.6558~12.4471~3;Mögelin~52.5582~12.3291~3;Großwudicke~52.5917~12.2322~3;Dabergotz~52.903~12.7262~3;Tieckow~52.4742~12.4544~3;Briest~52.4414~12.4265~3;Göttin~52.3677~12.5482~3;Fohrde~52.482~12.4702~3;Plaue~52.4089~12.4181~3;Gortz~52.5127~12.6434~3;Mahlenzien~52.3252~12.442~3;Woltersdorf~52.4079~12.3703~3;Wusterwitz~52.3703~12.3841~3;Rogäsen~52.3215~12.3543~3;Viesen~52.3234~12.3893~3;Breddin~52.8871~12.2246~3;Kümmernitz~52.8569~12.2198~3;Iden~52.7794~11.9141~3;Kuxwinkel~52.4826~12.3005~3;Schlagenthin~52.465~12.2803~3;Parchen~52.3516~12.0812~3;Sanne~52.657~11.9391~3;Miltern~52.5581~11.9336~3;Schelldorf~52.4712~11.9785~3;Ringfurth~52.381~11.9045~3;Jerchel~52.4607~11.9448~3;Garz~52.7533~12.2015~3;Retzow~52.6251~12.6828~3;Lindtorf~52.6833~11.9167~3;Zernitz Bahnhof~52.8905~12.3471~3;Trechwitz~52.3667~12.717~3;Buch~52.4854~11.9484~3;Garlitz~52.5645~12.5589~3;Brunne~52.7725~12.7286~3;Glöwen~52.9135~12.0847~3;Großwulkow~52.4999~12.1231~3;Brettin~52.4259~12.1843~3;Schenkenberg~52.3902~12.7091~3;Pessin~52.6425~12.6637~3;Klietz~52.6673~12.068~3;Schwarzholz~52.7473~11.9767~3;Langensalzwedel~52.5815~11.9416~3;Vietznitz~52.7282~12.6278~3;Groß Behnitz~52.5811~12.7345~3;Schönfeld~52.7266~12.0608~3;Nitzahn~52.4656~12.3575~3;Bochow~52.382~12.7927~3;Hindenburg~52.7534~11.9289~3;Ribbeck~52.6248~12.7535~3;Hohenberg-Krusemark~52.7266~11.9483~3;Märkisch Luch~52.5809~12.6304~3;Zabakuck~52.4565~12.2126~3;Mützel~52.3791~12.1753~3;Grieben~52.4356~11.9578~3;Mangelsdorf~52.5117~12.0667~3;Wulkau~52.761~12.0693~3;Ihleburg~52.3309~11.9158~3;Neuenklitsche~52.4794~12.2323~3;Legde~52.9196~11.9636~3;Neuermark-Lübars~52.65~12.0425~3;Kade~52.3786~12.2678~3;Großderschau~52.7898~12.3665~3;Groß Kreutz (Havel)~52.4041~12.7764~3;Fischbeck (Elbe)~52.54~12.0158~3;Seeblick~52.6867~12.3936~3;Brädikow~52.69~12.6503~3;Bittkau~52.4136~11.9639~3;Parey~52.3796~11.986~3;Kriele~52.6542~12.5551~3;Schönhausen (Elbe)~52.5825~12.0378~3;Altenzaun~52.7411~12.0264~3;Deetz~52.4456~12.7712~3;Wust~52.4144~12.61~3;Wenzlow~52.3003~12.4465~3;Behrendorf~52.8269~11.9607~3;Paulinenaue~52.6754~12.7125~3;Bützer~52.5348~12.3~3;Wildberg~52.877~12.6306~3;Stöffin~52.8702~12.7437~3;Hohengöhren~52.6157~12.0364~3;Bertkow~52.7258~11.9039~3;Döberitz~52.5217~12.3685~3;Dreetz~52.8024~12.4605~3;Milow~52.52~12.3115~3;Schollene~52.677~12.217~3;Warnau~52.7399~12.1908~3;Zachow~52.4833~12.7833~3;Wendemark~52.8598~11.9264~3;Beelitz~52.6886~11.9534~3;Hassel~52.6391~11.9273~3;Kamern~52.7499~12.113~3;Storkau (Elbe)~52.6135~11.9998~3;Kuhlhausen~52.7832~12.1965~3;Redekin~52.4669~12.0762~3;Nielebock~52.4357~12.0649~3;Roskow~52.473~12.7154~3;Barnewitz~52.5643~12.6162~3;Gollwitz~52.4182~12.6439~3;Hämerten~52.5897~11.9875~3;Karow~52.3442~12.267~3;Roßdorf~52.4267~12.2078~3;Wachow~52.5319~12.7605~3;Sandauerholz~52.7918~12.0051~3;Quitzöbel~52.8929~11.9853~3;Jeserig~52.4107~12.6941~3;Grütz~52.6616~12.2784~3;Emstal~52.302~12.7775~3;Senzke~52.6576~12.6134~3;Molkenberg~52.6975~12.2126~3;Jederitz~52.803~12.1334~3;Wagenitz~52.673~12.6408~3;Groß Ellingen~52.7053~11.9629~3;Rosenhof~52.7662~12.0239~3;Berge~52.8206~11.997~3;Räbel~52.8334~12.0284~3;Spiegelberg~52.8578~12.4284~3;Köritz~52.8436~12.4439~3;Zitz~52.3243~12.3202~3;Dahlen~52.8604~12.0529~3;Toppel~52.8472~12.0588~3;Göttlin~52.6307~12.3081~3;Böhne~52.5603~12.3039~3;Lohm~52.8608~12.3166~3;Zernitz~52.8833~12.3687~3;Stüdenitz~52.8891~12.2782~3;Sieversdorf~52.821~12.3954~3;Hohenofen~52.8233~12.4189~3;Schönermark~52.9015~12.3236~3;Nahmitz~52.3373~12.7255~3;Ferchland~52.4399~12.0023~3;Michelsdorf~52.3065~12.6996~3;Netzen~52.342~12.6845~3;Rietz~52.3734~12.6376~3;Wischer~52.6408~11.961~3;Arnim~52.6268~11.9468~3;Derben~52.4152~11.9974~3;Scharteucke~52.4547~12.0849~3;Billberge~52.631~12.0035~3;Staffelde~52.6011~11.9573~3;Zerben~52.3572~11.9515~3;Hohenseeden~52.3139~12.0076~3;Bergzow~52.396~12.0496~3;Dalchau~52.7078~12.0179~3;Nierow~52.6874~12.1857~3;Mahlitz~52.6834~12.1448~3;Neu-Schollene~52.6565~12.2297~3;Seedorf~52.4114~12.0655~3;Güsen~52.3429~11.98~3;Grebs~52.3387~12.6603~3;Hagen~52.4045~12.1014~3;Melkow~52.5334~12.1103~3;Scharlibbe~52.6964~12.0706~3;Saaringen~52.4438~12.6612~3;Strodehne~52.7625~12.2249~3;Klein Kreutz~52.4357~12.6273~3;Bindfelde~52.5902~11.9026~3;Nitzow~52.8747~12.0532~3;Sydow~52.5245~12.1468~3;Ferchels~52.6622~12.1771~3;Bagow~52.5139~12.7009~3;Bölsdorf~52.5081~11.9268~3;Parey (Havelaue)~52.6779~12.2436~3;Ketzür~52.4948~12.6289~3;Kleßen~52.7397~12.4913~3;Schmerzke~52.3884~12.5944~3;Haage~52.6769~12.5957~3;Kotzen~52.6385~12.5178~3;Hohenferchesar~52.4973~12.4973~3;Rindtorf~52.6762~11.9233~3;Boecke~52.3008~12.4042~3;Warchau~52.3602~12.3453~3;Reckahn~52.3369~12.547~3;Altbensdorf~52.4198~12.3442~3;Kleinwusterwitz~52.457~12.2484~3;Güssow~52.4702~12.2017~3;Altenklitsche~52.4865~12.2016~3;Großdemsin~52.4302~12.2648~3;Vehlen~52.4306~12.3228~3;Klein Ellingen~52.7138~11.9815~3;Belicke~52.3765~12.246~3;Fienerode~52.3488~12.1694~3;Kleinwulkow~52.4822~12.1214~3;Kabelitz~52.5424~12.0496~3;Dretzel~52.314~12.1172~3;Görne~52.7038~12.5148~3;Hohenbellin~52.4632~12.1488~3;Stölln~52.7487~12.3819~3;Päwesin~52.5118~12.7151~3;Weseram~52.4632~12.6711~3;Krahne~52.3203~12.5653~3;Damsdorf~52.3619~12.7562~3;Königshorst~52.7117~12.7883~3;Giesenslage~52.806~11.9564~3;Busch~52.7852~11.9503~3;Nennhausen~52.6039~12.5072~3;Osterholz~52.7505~12.027~3;Vehlgast~52.8~12.2017~3;Götz~52.4201~12.7187~3;Lehnin~52.319~12.7452~3;Wöplitz~52.8312~12.1219~3;Damerow~52.812~12.2257~3;Bürs~52.6736~11.985~3;Gladau~52.3061~12.0912~3;Klietznick~52.4701~12.0207~3;Steinitz~52.5137~12.04~3;Semlin~52.6589~12.3881~3;Neubensdorf~52.4106~12.3527~3;Prützke~52.3516~12.6281~3;Kirchmöser~52.3758~12.4228~3;Beetzsee~52.4658~12.5571~3;Butzow~52.4917~12.6013~3;Stechow~52.6301~12.4572~3;Mützlitz~52.5581~12.5095~4;Buckow~52.5955~12.2637~4;Krahnepuhl~52.4574~12.4385~4;Bohnenland~52.4622~12.5055~4;Malge~52.3696~12.4723~4;Liepe~52.6125~12.6025~4;Warsow~52.7112~12.6426~4;Buschow~52.5898~12.636~4;Zollchow~52.5279~12.2095~4;Jerchel~52.4882~12.3438~4;Möthlitz~52.4754~12.3899~4;Möthlow~52.6084~12.6525~4;Vieritz~52.5259~12.2561~4;Landin~52.6646~12.537~4;Selbelang~52.6333~12.7167~4;Klein Behnitz~52.5728~12.7099~4;Neuroddahn~52.8153~12.3404~4;Roddahn~52.8305~12.3082~4;Rübehorst~52.7916~12.3262~4;Bienenfarm~52.6636~12.7354~4;Rehberg~52.7245~12.1676~4;Bollmannsruh~52.5077~12.6821~4;Kützkow~52.4923~12.4499~4;Rhinsmühlen~52.6579~12.5009~4;Damme~52.6147~12.5685~4;Spolierenberg~52.568~12.4113~4;Steckelsdorf Ausbau~52.5957~12.3022~4;Lötze~52.6602~12.3554~4;Semlin Ausbau~52.6513~12.401~4;Grünaue~52.5783~12.348~4;Heidekrug~52.6358~12.3613~4;Joachimshof~52.8339~12.2641~4;Goldbeck~52.8551~12.3782~4;Kampehl~52.8646~12.4584~4;Wust-Damm~52.5727~12.1501~4;Neuwartensleben~52.6739~12.1599~4;Barsikow~52.8495~12.5377~4;Nackel~52.8237~12.5745~4;Kietz~52.756~12.3177~4;Bahnitz~52.4942~12.4037~4;Marquede~52.502~12.3297~4;Neukamern~52.7692~12.1248~4;Kleinwudicke~52.5942~12.2105~4;Gülpe~52.7259~12.2239~4;Wolsier~52.715~12.2675~4;Spaatz~52.7034~12.3099~4;Elslaake~52.6884~12.3633~4;Witzke~52.6901~12.4219~4;Ohnewitz~52.7339~12.4281~4;Neuwerder~52.7439~12.4183~4;Lochow~52.6865~12.445~4;Albertsheim~52.6541~12.3381~4;Buchhorst~52.7723~12.312~4;Seelensdorf~52.533~12.4804~4;Schmetzdorf~52.5463~12.1727~4;Galm~52.5076~12.2167~4;Dickte~52.7236~12.4947~4;Briesen~52.7062~12.5934~4;Jahnberge~52.7208~12.7066~4;Knoblauch~52.4505~12.355~4;Linde~52.5448~12.6629~4;Neubuchholz~52.3959~12.2605~4;Riewend~52.5339~12.71~4;Gohlitz~52.545~12.7647~4;Waldsiedlung~52.8064~12.4766~4;Meßdunk~52.3233~12.5304~4;Wendeberg~52.451~12.3842~4;Michaelisbruch~52.7798~12.5177~4;Kleindemsin~52.4479~12.2571~4;Neu Plaue~52.4379~12.3925~4;Altbellin~52.4747~12.1643~4;Klessener Zootzen~52.7745~12.638~4;Briesener Zootzen~52.7584~12.6725~4;Wutzetz~52.8034~12.5809~4;Kieck~52.5337~12.5783~4;Doberow~52.3228~12.712~4;Lobeofsund~52.72~12.7509~4;Gutenpaaren~52.4794~12.7639~4;Quermathen~52.5733~12.7638~4;Vichel~52.8342~12.6233~4;Havemark~52.4944~12.1317~4;Dunkelforth~52.4114~12.2248~4;Lünow~52.4895~12.6625~4;Grabow~52.4829~12.64~4;Mötzow~52.4646~12.5896~4;Altgarz~52.7774~12.3683~4;Berge~52.6218~12.796~4;Babe~52.8089~12.3112~4;Wust-Siedlung~52.5596~12.137~4;Gräningen~52.5791~12.4726~4;Sophienhorst~52.3626~12.2285~4;Waldfrieden~52.8407~12.2266~4;Wendisch Kirchhof~52.7955~12.2138~4;Elshof~52.6956~12.1662~4;Kamerun~52.6559~12.7357~4;Müggenbusch~52.8413~12.1149~4;Waldkolonie~52.5415~12.3628~4;Mögelin Ausbau~52.5562~12.3527~4;Läsikow~52.8258~12.5843~4;Heineberg~52.5772~12.6813~4;Wolfsmühle~52.5167~12.301~4;Königshütte~52.5532~12.359~4;Neuhof~52.84~12.3212~4;Bartschendorf~52.7667~12.4823~4;Kreuzberg~52.6737~12.2394~4;Tegeland~52.6611~12.41~4;Leddin~52.8863~12.4045~4;Görner Mühle~52.6974~12.5157~4;Mühlenburg~52.7549~12.321~4;Siegrothsbruch~52.7615~12.4123~4;Giesenhorst~52.7628~12.439~4;Scheunstelle~52.7742~12.2474~4;Floringshof~52.7903~12.2892~4;Kleinderschau~52.7922~12.3483~4;Sophiendorf~52.8651~12.2453~4;Hörning~52.8555~12.2379~4;Marienhof~52.5061~12.6963~4;Hohenwinkel~52.7106~12.3014~4';
+
+  var ORTE = ORTE_ROH.split(';').map(function(s){
+    var t = s.split('~');
+    return { n:t[0], lat:+t[1], lon:+t[2], r:+t[3] };
+  });
+
+  var HIMMELSRICHTUNG = ['nördlich','nordöstlich','östlich','südöstlich','südlich','südwestlich','westlich','nordwestlich'];
+
+  // Lagebezeichnung für eine in OSM unbenannte Fläche
+  function lageName(lat, lon){
+    var best = null;
+    for(var i=0;i<ORTE.length;i++){
+      var o = ORTE[i];
+      var d = distanzKm(lat, lon, o.lat, o.lon);
+      // größere Orte dürfen etwas weiter weg liegen und gewinnen trotzdem
+      var gewichtet = d * (1 + o.r * 0.12);
+      if(!best || gewichtet < best.g) best = { o:o, d:d, g:gewichtet };
+    }
+    if(!best) return null;
+    if(best.d <= 1.6) return 'Wald bei ' + best.o.n;
+    var winkel = (Math.atan2(lon - best.o.lon, lat - best.o.lat) * 180/Math.PI + 360) % 360;
+    var ri = HIMMELSRICHTUNG[Math.round(winkel/45) % 8];
+    return 'Wald ' + best.d.toFixed(1).replace('.', ',') + ' km ' + ri + ' von ' + best.o.n;
+  }
+
+  var nameCache = {};
+  function waldName(f){
+    var p = f.properties;
+    if(p.name) return p.name;
+    if(nameCache[p.osmId]) return nameCache[p.osmId];
+    var m = featureMitte(f);
+    var n = lageName(m[0], m[1]) || 'Waldfläche';
+    nameCache[p.osmId] = n;
+    return n;
+  }
+
+  /* ---------- Baumart je Waldfläche ----------
+     Laubanteil in Prozent, ermittelt aus dem OSM-Tag leaf_type (Endung o) bzw. aus der
+     Copernicus-Waldtypkarte 2012, 20 m (Endung c, bzw. n wenn aus der Nachbarschaft).
+     Abgleich gegen die vorhandenen OSM-Tags: 91,8 % Übereinstimmung bei Laubwald.
+     Die Tabelle steht hier in der HTML, damit sie unabhängig von der Walddatei gilt.   */
+  var LAUB_ROH = 'w16315603:14c w19797948:5c w19851403:29c w19851404:34c w19851405:8c w19851712:48c w19851713:27c w19851714:41c w19851718:46c w19851721:100c w19853600:11c w19853602:56c w19853604:14c w19853605:24c w19853606:4c w19853607:45c w19853661:52c w19853781:21c w19853785:0c w19853786:26c w19993146:15c w19993149:19c w20226785:17c w20226792:0c w20226794:8c w20226797:0c w20226801:74c w20226802:31c w20226829:7c w20226831:94c w20226833:56c w20226834:32c w20293275:21c w23121280:20c w23854866:10c w27744270:53c w27744272:92c w27744274:50o w27744322:77c w27744366:36c w31247520:91c w31253051:42c w48502974:10c w48633068:48c w48633069:100c w48633070:80c w48633072:100c w48633074:100c w48633076:29c w48633078:69c w48633080:67c w48633081:51c w48633084:74c w48820563:26c w48820564:54c w49215515:0c w49215523:14c w49215525:8c w49215527:26c w49215528:16c w49215533:0c w49215535:15c w49215537:0c w49215538:18c w49215554:100c w49215557:100c w49217655:63c w49217656:6c w49217657:0c w49217658:54c w49217659:21c w49217660:0n w49217662:56c w49217664:0c w49217665:1c w49217666:22c w49217667:55c w49217670:48c w49217672:23c w49217673:14c w49217676:56c w49217677:20c w49217678:22c w49217680:15c w49217681:20c w49217932:100c w49222724:8c w49222725:71c w49222726:2c w49222727:0c w49222729:59c w49222730:14c w49222731:14c w49222732:4c w49222733:46c w49749902:47c w49788075:100c w49788076:89c w49788080:100c w49788081:47c w49789664:18c w52564380:27c w52582062:17c w52582066:28c w52585565:50c w55681002:100c w55681071:100c w55681103:100c w55681378:100c w55681379:100c w88457504:76c w88610345:68c w88758137:26c w88762403:5c w88762405:0c w88818590:100c w88818592:88c w88818593:99c w89411608:63c w89428153:98c w89428154:98c w94523277:25c w94580471:100c w95440972:100c w96746036:53c w98529189:100c w98536589:95c w98544685:100c w99057078:24c w100061685:39c w102017822:100c w102252717:100c w102265831:93c w102270161:100c w102283381:28c w102283421:0c w102284128:9c w102284959:23c w102290789:17c w102290823:100c w102294895:100c w102725780:100c w102959734:100c w102959766:100c w104707727:21c w104707740:29c w104774691:100c w104774713:100c w104837391:42c w104837399:21c w104887821:100c w104887824:92c w110573258:80c w110575442:0c w110575444:20c w110575452:100c w110575461:52c w110575466:20c w110575484:44c w110575489:0c w110638312:100c w110638320:99c w112669096:10c w122876706:12c w123229744:23c w128947498:28c w128947501:53c w128947503:79c w128947513:75c w139506949:17c w139506951:4c w149543054:100c w157840678:0c w157840682:13c w157840687:0c w167083131:93c w168895484:9c w171140015:19c w171140017:20c w171140018:100c w171140023:100c w172408446:100n w172408447:100c w172408448:37c w172408450:13c w172410911:57c w172664331:60c w172664332:18c w172664333:6c w173484525:15c w173484527:100o w173484531:8c w173484533:0c w173484534:50o w173484535:17c w175215348:5c w175215352:3c w175215353:0c w175215363:26c w175220203:22c w175229243:32c w175253837:15c w175253839:18c w175273050:3c w175273052:37c w175273071:14c w175273073:40c w175273085:8c w175273097:2c w175509923:76c w175509924:75c w175509926:3c w175509928:26c w175509932:12c w175509933:100c w175786593:9c w176075039:28c w176075042:21c w176075046:12c w176239310:9c w176239313:47c w176239318:96c w178148367:59c w178148479:31c w180536132:25c w180569838:14c w180578699:25c w180579871:2c w194091335:100c w194091337:100c w194109869:12c w197782108:100n w238371976:100c w238498104:74c w238498106:75c w238998918:100c w239117399:100c w255647349:100c w255785950:100c w255911525:100c w256018834:84c w256018838:100c w256018846:15c w256428529:78c w256540842:48c w256549004:100c w256558219:100c w256700609:11c w256700625:100o w298564148:34c w325754409:100c w325773867:9c w325812559:11c w329188564:100c w329658679:50o w332071294:100c w332439878:100c w334606634:8c w355543009:0c w355547667:79c w355548731:50o w355571249:100c w355573381:100c w358127732:100c w358134124:28c w368144750:74c w381134264:100c w381409872:54c w382519609:0o w382561190:90c w384273063:65c w384273064:24c w384351020:100c w384370629:24c w385011710:7c w385055793:100c w386720911:100c w389105398:96c w396473866:100c w396767241:100c w403948764:11c w408605545:100o w410213074:100c w410213076:100c w410481974:100o w410546603:100c w412763274:100o w427283872:100c w427286612:100c w447756448:100c w447756449:100n w447756476:28c w461147999:31c w461933999:100o w461946164:100o w462615507:27c w462617362:100c w491204586:100c w513389301:80c w529765564:100c w530963088:100c w536749204:100c w538803616:100c w539075510:0c w540659276:100o w540803559:12c w541717061:100c w542720977:100c w542728595:93c w542730639:100c w543455418:50n w544813712:100c w544813713:100c w544843397:100c w545086870:100c w546163567:100c w551496891:100c w551506817:100c w552168927:100c w552816110:47c w553566412:86c w553784730:51c w554099236:90c w555527490:100c w559504788:23c w599428594:100c w626502606:100c w626502625:96c w626687768:100n w640270676:100o w641672587:100c w642820234:100c w643134438:100c w643163216:100c w643687517:49c w643924610:89c w644289441:71c w644994869:100c w648551173:2c w648698196:71c w648863852:16c w649693710:100o w650269150:100o w650758005:100c w651579986:50o w652939813:100c w750532383:100c w755313559:100o w800106539:100c w917105067:24c w917146072:37c w917146073:8c w917146074:20c w925650698:27c w926750808:98c w1190888999:74c w1190960350:19c w1191397427:6c w1191656224:12c w1193924189:7c w1193924191:27c w1193924193:100c w1193934516:3c w1194483285:100n w1194869397:28c w1195657994:100c w1195663283:32c w1196916008:100c w1197526458:26c w1197526460:13c w1197526487:93c w1197526489:100c w1202552326:15c w1202565940:60n w1202608558:2c w1202644027:50c w1204140220:100c w1204140221:31c w1205397590:100c w1205566085:21c w1205907292:40c w1205929813:100c w1205929820:100c w1207003078:16c w1207003081:100c w1207003082:33c w1207003083:39c w1207003084:80c w1207005407:17c w1207005409:61c w1207005411:63c w1207005415:11c w1207765930:0c w1207765933:0c w1207765935:67c w1207857019:100c w1207857021:20c w1207857024:100c w1207871260:100c w1207871261:47c w1207871273:31c w1209026528:27c w1209026532:24c w1209040603:22c w1209040609:18c w1209040624:100o w1209068069:24c w1209088667:100c w1209088687:12c w1209094279:17c w1209094285:19c w1209127503:50c w1209835555:9c w1210427828:19c w1210427829:12c w1210723577:7c w1210809310:11c w1210809321:20c w1210809338:49c w1210826690:36c w1210826694:42c w1210826703:100n w1210826713:3c w1210826714:1c w1210826715:3c w1210834669:13c w1210836097:1c w1211136690:41c w1211136691:21c w1211339678:34c w1211582343:100c w1212112015:15c w1212132733:7c w1212136891:56c w1212136893:33c w1212207458:100c w1212550087:8c w1212550088:0n w1212550090:20c w1212550094:0c w1212550096:6c w1212550099:0c w1212550101:10c w1212550102:5c w1212554314:19c w1212554319:80c w1212554321:6c w1212574305:0c w1212574306:30c w1212574307:0c w1212574308:1c w1212574309:11c w1212574312:8c w1212574313:20c w1212574315:0c w1212574318:9c w1212574324:1c w1212574326:43c w1212574329:0c w1212574332:0c w1212574334:2c w1212574337:46c w1212574338:3c w1212574342:21c w1212574344:96c w1212574352:3c w1212574354:5c w1212574358:0c w1212574360:0c w1212574364:12c w1212574365:8c w1212574367:5c w1212574368:12c w1212582021:0c w1212582022:5c w1212582026:21c w1212582029:13c w1212582032:9c w1212582033:34c w1212582034:98c w1212582036:8c w1212595372:100c w1212595373:100c w1212595374:52c w1212595378:0c w1212613936:20c w1212619449:54c w1212820565:1c w1212820568:6c w1212820569:6c w1212836263:100c w1213127670:88c w1213127674:18c w1214867568:21c w1215117375:12c w1215117387:11c w1215117390:50c w1215118140:19c w1215143197:2c w1215143200:45c w1215143203:18c w1215143204:4c w1215143208:32c w1215143211:5c w1215143212:67c w1215143214:7c w1215143218:4c w1215143219:37c w1215143225:12c w1215143227:0c w1215143231:0c w1215143235:32c w1215143236:22c w1215143241:23c w1215143242:1c w1215143246:16c w1215143247:1c w1215143253:0c w1215143254:8c w1215143257:12c w1215143260:0c w1215143264:0c w1215143265:1c w1215143271:0c w1215143272:80c w1215143273:5c w1215143276:0c w1215143278:30c w1215143280:0c w1215143282:0c w1215143283:1c w1215143287:12c w1217887616:49c w1217887617:79c w1217887620:23c w1217887621:22c w1217888181:46c w1217894398:2c w1217894401:50c w1217894404:57c w1217894405:71c w1217894413:56c w1217894414:6c w1218124169:26c w1218124172:1c w1218124173:3c w1218124178:7c w1218124179:1c w1218594822:77c w1218594823:100c w1218626138:48c w1218626139:28c w1218626140:62c w1218626141:77c w1218626142:27c w1218626153:0c w1218626154:32c w1218626155:1c w1218626158:14c w1218626159:12c w1218626161:11c w1218626162:10c w1218626163:2c w1218626164:11c w1218626167:7c w1218626168:4c w1218626169:10c w1218626175:14c w1218626178:95c w1218626193:0c w1219094051:24c w1219094270:100c w1228510711:50o w1233658570:100c w1241582771:91c w1241583117:6c w1241585989:75c w1289187600:95c w1289701729:100c w1292446704:100n w1445281098:98c w1445565983:73c w1486133142:100c w1489920959:100c r34037:34c r393412:98c r1484052:21c r1514362:46c r1524452:47c r1579781:100c r2015901:96c r2249198:26c r2341331:66c r2341332:17c r2341487:100o r2341702:42c r3429739:16c r4759763:6c r4759764:30c r4759765:100c r5661004:33c r5708828:33c r6071357:10c r6072158:17c r6116966:32c r6137285:100c r6162908:3c r7635655:94c r7699390:21c r7716479:15c r7733718:100c r7741084:100c r7753003:31c r7766703:33c r7770276:18c r7845916:12c r8906241:14c r8919829:40c r8921766:91c r8955213:89c r9045012:14c r9045052:7c r9050273:3c r9065160:100c r9304635:100c r11063858:100c r12347898:45c r12533002:7c r12533100:6c r12533174:12c r12533205:10c r16241912:98c r16305248:10c r16404291:14c r16411164:0c r16477752:63c r19795211:72c w19853782:4c w19853784:58c w23327614:34c w23607719:0c w23748798:50o w23748861:3c w26277810:7c w26363759:26c w26363760:4c w26363761:67c w37036446:6c w49288859:56c w49288860:25c w49289689:100c w49292660:100o w56200513:57c w71443327:100c w72388412:98c w72388417:100c w72388418:50o w72388419:0o w72388423:68c w72388425:0o w72388428:50o w86497427:14c w87100281:87c w87530092:19c w87568385:85c w87805632:100c w87925433:100c w88020219:97c w88020227:95c w88020257:71c w88020270:100c w88135655:70c w88135664:25c w88276003:100o w89197728:30c w89252947:62c w89265124:0c w89265149:6c w89295734:100o w89406956:100c w91224012:18c w91233467:9c w91282195:35c w91282273:34c w92026783:6c w92026966:15c w92075809:0c w92075854:0c w92075889:100c w92075897:100c w92102540:96c w92102635:100c w92138726:39c w92138727:100c w95145706:16c w95151202:87c w95413343:86c w95413350:87c w96138234:100c w96138242:100c w97463585:45c w97463619:70c w98746982:20c w100678369:100o w100678382:35c w100678392:36c w100678396:28c w100687270:11c w101601312:100n w101601327:3c w101820206:0c w101820247:50c w103292537:100c w103292540:65c w103292541:100c w103292542:100c w103292552:100c w104679358:100c w106116596:22c w106773144:59c w107554453:100c w107741965:50o w107816066:100c w107816067:100c w107816099:100c w107816109:100c w107816117:100c w107816132:100c w108259474:11c w109874384:100c w110710446:60c w112517835:77c w113622302:40c w115679671:100c w115679730:100c w115679743:97c w115880515:100c w122254986:96c w123229745:61c w123229765:30c w126148352:100c w126148355:100c w128469133:1c w128469136:40c w128469139:100c w128516744:100c w128947512:4c w139975175:100c w150943483:20c w151037771:100c w172407024:100c w172407028:51c w172407029:21c w172407030:14c w172407031:96c w172407032:100c w172407033:13c w172407034:22c w172407035:23c w172413950:53c w172661102:100c w172663435:28c w175637763:7c w175637765:63c w187993348:50o w191237034:100c w196215550:100c w196313554:100n w196378276:23c w242924375:20c w242924377:19c w242924906:100n w242924907:8c w307025954:87c w308695352:95c w332288600:63c w333241415:100c w333359613:100c w333778662:61c w335646109:100c w335651818:100c w352476742:100c w389685821:100c w389751261:100c w389791900:100c w389791901:100c w389861134:100c w390298304:100c w390560724:100c w390655702:100c w390655703:81c w393011673:100c w398915648:100o w400271793:100c w400376006:100c w400414231:100o w403218891:100c w404721597:100c w404775496:100c w404775498:100c w404775502:78c w404778069:100c w405166044:100c w405714821:100n w405801522:100c w405801523:100c w405801524:100c w405801525:100c w405965056:89c w406271753:24c w406373128:100c w406373129:100c w406373130:100c w406373140:100c w417901189:95c w417906047:100c w417916940:76c w417916941:100o w417916946:79c w418033209:100c w418263695:100o w418462138:100c w423145401:97c w423145402:100c w423145408:95c w437137020:59c w437137021:100c w437137031:100c w444281779:100c w450762939:100c w450772221:100c w478328542:100c w480356521:0n w480358725:37c w480919328:75c w481006657:100n w481567510:13c w482032808:5c w487046220:92c w489104828:100c w489721669:100c w490417417:100o w490417418:100o w490417419:100o w492420504:100c w493996045:100c w496516206:100c w499366746:100c w500710892:100c w501050948:100c w505410651:13c w507852254:0n w510735610:100o w512069624:50o w512079752:50o w512079753:50o w512079754:50o w520644538:100c w521155906:99c w521158250:100c w521342921:81c w521859846:100c w522247959:100c w522247961:100c w523464514:100o w531271114:100c w531302450:97c w534629786:81c w553842535:21c w554093905:92c w554099230:100c w554289807:100c w554289808:100c w554289809:100c w554289813:100c w554289814:96c w554670888:100c w556343258:100c w557777363:100c w558556151:50o w570537253:35c w583005807:100o w592703698:100o w592703701:100o w598490519:100c w599038390:100o w600386976:100o w600439057:100n w600846370:100c w600851422:100n w605896349:63c w605932438:100c w606124042:100n w607853783:94c w612647632:100n w616070311:89c w616515774:50n w618558765:100c w619530766:69c w619981303:100c w620966751:94c w621294716:100n w621294741:100n w621525441:100o w621525446:100o w621952526:100o w624056172:100c w624248495:60c w625732154:100c w625761074:100c w625890508:54c w625898980:37c w625906931:99c w626031488:100c w632608809:100c w653250941:100o w653621601:6c w653648166:27c w653648171:18c w653648177:63c w653648180:28c w653648181:5c w653648182:5c w653648183:6c w653648203:60c w653717422:25c w653717426:100c w653717427:13c w653717431:69c w653717437:71c w653725615:36c w653725618:23c w653725627:83c w653729375:100c w653793314:66c w653793317:43c w653796336:38c w653801230:19c w653801232:14c w655054419:50o w655065162:45c w659992294:88c w659992295:100c w659992309:94c w659992326:100c w661238628:100o w670381539:50o w670779315:100c w670779316:100c w670779318:50o w671053338:100c w672374911:80c w693094187:100c w760019759:100c w784018234:51c w784829841:22c w784829852:0c w785152403:56c w785152412:75n w785595627:100c w786335387:100c w801747749:100n w807310165:100c w809679896:100n w810207967:6c w847975962:100c w865169546:93c w865169556:85c w865169617:91c w865169618:34c w885987005:100o w909605723:11c w918793142:100c w927273816:100c w931541011:100c w931671850:100c w932627797:100n w936851948:100o w939303760:100n w993691312:100c w999980088:100c w999981939:100c w1000035604:100n w1000352235:71c w1000354337:100c w1000354946:100c w1002128984:100n w1026167686:100c w1026517283:21c w1067926479:100o w1079481606:16c w1079582878:54c w1079738292:92c w1079738293:54c w1080113166:69c w1080113171:100c w1105716206:14c w1159049115:70c w1185263359:100o w1232766929:41c w1236094005:50o w1236133906:100c w1236663830:0n w1241585987:9c w1241871000:0n w1303920405:50o w1303921763:50o w1303921764:50o w1303923100:50o w1315457931:100c w1432610464:93c w1432610465:83c w1448053078:95c w1451132321:100c w1454222170:4c w1454512228:100n r22103:13c r55620:7c r393981:50o r399601:90c r1381451:97c r1438423:15c r1524263:62c r1606656:50o r2301548:80c r2305450:80c r2345450:10c r2637390:92c r3252655:40c r3253395:21c r3698235:82c r3698236:94c r3698238:100c r3716423:38c r4743105:99c r4757358:96c r4757369:49c r7032261:98c r7080856:95c r7101466:10c r7154529:23c r7163374:100c r7187631:77c r7200476:100c r7200984:90c r7255101:100o r7259970:45c r7284782:17c r7426249:26c r7449084:48c r7540710:99c r7548666:100c r7681575:34c r7813543:0c r7822419:35c r8062357:29c r8119322:85c r8123091:100c r8141861:0c r8368632:3c r8382439:100c r8385347:5c r8588296:100c r8669100:100c r8671145:12c r8703713:43c r8703800:90c r8766960:100o r8910595:24c r9086990:100c r9086991:100c r9089150:8c r9089426:6c r9089427:66c r9089428:18c r9090327:60c r9090362:93c r9090363:61c r9090669:100c r9091595:13c r9091729:5c r9094340:38c r9094341:19c r9104242:31c r9181843:92c r9351000:16c r10906767:16c r10919445:100c r10919446:88c r10928614:6c r10941679:11c r11780742:100c r11909247:3c r12045042:14c r12089563:7c r12347946:17c r12532017:27c r12532076:6c r12586411:100c r12589620:87c r13430455:6c r16048246:81c r16878321:100c r16928205:100c r19800422:96c r19845792:0c w32903146:30c w39984014:1c w39984015:1c w48102373:52c w48595316:38c w48596706:32c w48596773:73c w48597039:21c w48615227:49c w48615250:25c w48628290:71c w48628291:12c w48706111:21c w48706112:24c w48706113:61c w48706114:31c w48706623:100c w48706624:100c w48833304:100c w48833306:45c w48833308:100c w48833575:100c w48835209:18c w48835210:35c w48835211:20c w48835212:10c w48835214:20c w48835215:36c w48835217:6c w48835218:53c w48835219:19c w48835220:100c w48835222:20c w48836473:0c w48837232:20c w48837235:15c w48837236:21c w48837237:0c w48837238:95c w48837463:5c w48851228:87c w48870434:85c w49577249:100c w49577250:98c w49577251:87c w49577252:45c w49577254:100c w49577255:94c w49577257:100c w49577260:100c w49581200:21c w49581201:13c w49581211:0c w49629576:100c w49629577:100c w49790368:100c w49790369:100c w52907582:88c w88494819:26c w88494820:20c w88600648:93c w88600674:75c w89023986:100c w89040109:100c w89151307:63c w89219898:100c w89225143:100c w90258975:88c w95012974:100c w96289097:100c w96289161:100c w96699313:94c w97154722:68c w97156239:100c w97156241:0c w97944352:97c w98055837:100c w101925777:13c w101925780:10c w101925784:17c w101925785:0c w101927990:3c w101939961:84c w101939976:31c w101939981:17c w101948348:11c w101949743:44c w101952482:100c w101961141:23c w101961219:95c w101964207:77c w102252711:56c w102304882:37c w102304885:0c w102404101:100c w102404555:91c w102419194:70c w102419195:100c w102419196:99c w102419197:100c w102419198:100c w102420763:100c w102481834:100c w102481851:100c w102540553:25c w102542226:14c w102542236:50o w102804805:100c w102814198:39c w102948790:7c w102948791:60c w102948792:8c w102957945:100c w102957957:100c w102957966:46c w104019440:100c w107178430:100c w107178432:100c w107178434:100c w107178443:100c w107235905:99c w107235934:100c w107235971:100c w109082480:100o w109353356:44c w109562167:100c w109566028:0c w109566031:77c w109566034:84c w109566039:100c w109566060:0c w109566065:0c w117643154:63c w117815270:35c w136070579:0c w149945750:81c w149945751:63c w149945752:100c w149945753:5c w149945754:100c w149945757:13c w149945758:100c w155661065:100c w155691223:100c w155871022:100c w156163504:100c w164393641:50o w164393642:65c w164393643:94c w164393645:70c w164393646:33n w164393650:100o w164393651:100o w164393653:100o w164500907:38c w164573563:100c w164573564:59c w164573565:73c w164832981:100c w164859744:66c w164859749:46c w164859750:83c w164859757:100c w164859758:49c w164859760:76c w164859761:51c w164859763:100c w164859764:100c w164859765:100c w164859767:100c w164859768:38c w164859769:21c w165931572:100c w166270604:100c w166736440:25c w167162175:100c w172412753:100c w175788828:46c w202867159:100c w203526835:100c w203531355:100c w203677144:4c w203677620:100c w204173278:100c w204173279:100c w206404701:92c w206507809:100c w206507812:100c w206507815:100c w207151732:100c w207226774:100o w207226777:100c w207226780:100c w209367243:100c w209435663:100c w209551533:100c w209558732:100c w209558736:100c w209558748:100c w209558757:100c w209558766:100c w209611693:100c w209611697:100c w209612761:100c w209648306:100c w211147852:100c w211239955:100c w215256513:53c w215268001:100c w215268016:100c w215289374:100c w215289397:100c w215289402:100c w215289404:100c w215383638:100c w215485289:100c w215485327:100c w215485328:100c w215491001:87c w215491002:100c w215491008:100c w216613325:100c w216682074:100c w216682087:100n w216682096:100c w216682097:100c w216682102:100c w218004402:100o w239819921:94c w240972547:100c w241422324:100c w242035046:100c w242074216:100c w242235435:100c w242345492:67c w242576269:37c w242576291:16c w242577063:17c w242920943:86c w242920946:60c w242920952:16c w245167289:100c w245167308:86c w245167325:100c w245167350:100c w245192449:100c w245192472:97c w245192478:100c w245192487:100c w245626456:80c w245968957:73c w245968963:100c w245968975:100c w245968978:82c w245968981:25c w245968983:100n w245968986:100c w246299537:100c w247375170:86c w247579391:27c w248204237:100o w248204241:100c w248219909:61c w248436069:66c w248436088:21c w248446316:8c w248649479:27c w248794833:100c w248794840:95c w248841353:12c w248841355:59c w248971977:100c w249002500:100c w249026268:19c w249569346:9c w249569347:26c w250952711:100c w251301795:92c w251613537:23c w252118422:10c w252118446:100c w252118469:14c w254337619:4c w337371164:100c w337371204:100c w337371205:100c w436232281:100c w512603482:100n w537545292:100c w617993870:100n w633974855:0n w634360129:100c w635018273:100c w635018284:100c w635759070:100c w636073089:100n w636964824:100c w637271986:93c w637274239:97c w637601970:100c w637909117:100c w639299443:100c w639616591:20c w642309200:77c w642689206:33c w648697036:73c w648697040:34c w648697042:94c w648697051:97c w649278381:86c w649278382:0c w649616233:11c w649641311:11c w649641317:14c w649665281:54c w649665289:82c w652079093:100c w652079115:100c w655440710:10c w655440712:44c w655461333:44c w656959034:100o w677420666:100c w678984955:100c w679119800:100c w680525004:100c w702196971:100c w702287906:55c w711326153:100c w711504821:21c w711853693:100c w727080606:100o w737660519:100c w737677693:100c w738018939:100c w738714306:100c w738929374:100c w812664165:82c w812664166:27c w812664167:100c w843498632:100c w863102575:100o w918417324:100c w983882219:100c w983882228:86c w983882233:100c w984020442:100c w984020455:100c w984020458:100c w984384127:100c w984384133:100c w984384150:100c w985559756:100c w985746615:100c w985910510:100c w1160815348:100o w1292446682:100c w1292518769:100c w1293268355:97c w1293268419:100n w1293268423:100c w1293268424:19c w1293962196:7c w1293962197:46c w1293962198:23c w1293962199:59c w1293962200:10c w1293962201:83c w1293962202:67c w1293962210:52c w1293962213:26c w1293962220:73c w1293962221:0c w1293962229:55c w1296412965:100n w1296708764:0c w1296708765:0c w1296708769:0c w1296708775:60c w1296708797:4c w1297183683:22c w1297183791:63c w1297183793:63c w1297183794:18c w1297183911:55c w1297183913:51c w1297693130:50o w1297693134:0c w1297693231:5c w1297693232:17c w1297693235:32c w1297693238:27c w1298170051:100c w1299071026:100c w1299108616:100c w1299108760:100c w1299315075:31c w1299315082:100c w1299315160:100c w1299315237:100c w1299315298:100c w1299377671:5c w1299377672:45c w1299377686:75n w1299377697:2c w1299377703:5c w1299377712:42c w1299377713:10c w1299377715:98c w1299377717:2c w1299377718:7c w1299377719:49c w1299820550:3c w1299820551:16c w1299820553:1c w1299824428:100c w1299824434:99c w1299835743:100c w1299835744:100c w1299835753:18c w1299835754:46c w1299852203:100c w1299852207:100c w1300071419:100c w1300071445:100c w1300071455:100c w1300071495:100c w1300071677:100c w1302765750:44c w1302765756:69c w1302765771:100c w1302879294:64c w1302896234:49c w1302926584:12c w1302926585:81c w1302926588:28c w1302926591:11c w1302926621:100c w1302926836:14c w1302926842:27c w1302926844:97c w1302926847:0c w1302926848:7c w1302926851:6c w1302926857:26c w1302926859:35c w1302926869:55c w1302926875:79c w1302943579:25c w1302943603:43c w1302943632:23c w1302943633:16c w1302943657:100c w1311112112:85c w1358086850:100c w1358086852:100c w1358086855:100c w1358086864:100c w1358086866:100c w1358086890:100c w1358086922:100c w1358086975:100c w1358087216:20c w1380313239:29c w1380313240:18c w1380313245:9c w1380313250:74c w1380313256:28c r52270:7c r387819:34c r393642:21c r1394146:17c r1547435:100c r2301652:98c r2860858:85c r3320334:100c r4458315:100c r4758573:7c r5911979:100c r6101508:50o r6700164:79c r7740050:100c r7740060:98c r8848242:15c r8903117:16c r9045118:11c r9045813:5c r9045814:4c r9052680:34c r9118087:19c r9430477:100c r9897191:100c r9904090:20c r10176662:56c r10184828:50c r10184844:36c r13248193:83c r15607906:100c w23430564:14c w23430578:31c w23607761:56c w25724117:100c w28165799:96c w28866385:17c w48597844:83c w48628773:7c w48628774:41c w48628775:75c w48662982:77c w49286486:100c w49286487:47c w49286488:62c w49286489:48c w49292659:76c w49577256:72c w49577262:99c w49581214:100c w75249352:0c w75249353:46c w75249354:41c w75249356:82c w75249477:100c w75263718:50o w75285578:27c w76615186:100c w79577778:100c w79577780:97c w79577781:100c w81825437:37c w86928719:48c w89117213:48c w89151314:100c w89216154:100c w90498577:99c w90498579:43c w90498580:92c w90498582:26c w91255122:48c w91255171:60c w91554254:99c w91554255:71c w91554262:97c w91554265:28c w91554269:5c w91560797:76c w91560799:9c w91560801:44c w91560802:35c w91601104:50c w91601413:99c w91664209:100c w91664210:92c w92119218:100c w92129794:100c w92129856:100c w92129861:100c w92145251:100c w96144170:56c w96289169:87c w96295308:100c w96315104:100c w96315118:100c w96315143:100o w96319162:37c w96319166:17c w96319171:100c w96319174:37c w96675740:100c w96845426:100c w96845458:18c w98971052:98c w101823302:96c w101823307:100c w101935712:100c w101987476:44c w101987479:88c w101999769:62c w102008157:48c w102027092:65c w106120821:99c w106368215:23c w106368216:100c w108197873:87c w108197876:100n w108197884:35c w108197921:4c w108203354:46c w108203355:67c w108310836:92c w108310843:96c w108346004:40c w110390747:25c w110390750:100c w110398072:100c w110705741:32c w110705758:47c w110705805:19c w110775192:100c w110779119:100c w111469717:61c w112244500:54c w113059175:31c w113101582:11c w119098856:100c w154361164:8c w157706604:52c w157706608:100c w157706609:22c w157726248:100c w172413624:32c w172657235:52c w172657561:100c w172659036:68c w175531752:100c w175540987:94c w175775342:100c w176547353:9c w180261086:100c w180261108:100c w180261150:100c w202567011:100c w202567013:100c w202567016:43c w206992252:100c w209198891:66c w237128926:40c w237128934:24c w258951839:100c w279413304:50o w322910006:100o w334334347:100c w337578408:98c w337578412:100o w367607424:100c w464229158:11c w464230106:56c w464233309:40c w464233478:24c w496151699:100o w501240742:70c w502761826:100c w502765447:100c w534277971:50o w534277993:93c w534277994:93c w587740826:74c w587833036:100c w591623655:100o w622903640:100c w652444949:87c w654563560:36c w654569131:88c w654569136:100c w654787590:99c w654787591:25c w654793275:84c w655297700:85c w655464998:12c w655464999:100c w655465005:81c w659604763:22c w659604831:0n w659604849:28c w659604868:20c w659604939:100c w659604953:63c w659784353:81c w660933575:100o w668881649:0o w668881653:100o w675274664:48c w677108754:100c w677283606:100c w683645049:100c w687904864:100n w689696041:100n w691000662:100c w694823732:47c w695696841:59c w698735259:74c w698741310:58c w698741311:85c w698759041:53c w698957889:51c w698966035:100c w698966036:100c w698966037:38c w699108596:100c w699117632:100c w700204891:86c w700469881:100c w700514250:100c w701193383:7c w720329269:100c w721190837:100c w722774003:88c w724059232:100c w744172113:0n w744738617:100c w745362819:100c w746760722:100c w746777247:100c w749269373:100c w749560278:83c w749602703:65c w751404950:77c w751623902:100o w751691518:100o w795877728:100n w795877729:100c w807213276:77c w813472931:100c w825206993:100o w830327413:100n w830327415:100c w830353728:94c w830353730:100c w831338175:100c w832632983:100o w832632987:100c w832632988:100c w832632994:100n w832632995:100c w832632996:100c w832633005:100c w832633006:100c w832645697:100o w832681266:100c w837056781:100o w837134552:100o w837415913:100c w839635343:100c w840126899:100c w844303936:96c w869774702:100c w869774703:100c w956958643:100o w961015777:100n w971322392:96c w971322401:100c w980623923:100c w980623932:100c w990293637:100c w990667452:67c w990667453:100c w1008945095:79c w1009051468:100c w1009051470:100c w1047703672:14c w1091868832:100c w1092272613:100c w1093116218:100c w1093289631:100c w1136309536:100o w1173652614:100c w1174922221:100c w1247825905:100c w1363652797:100c w1363652806:100c w1363652808:100c w1363849933:100c w1443908859:0o w1443913347:0o w1468005062:100n w1492291721:100c w1492843120:100c r22143:58c r55581:23c r396126:62c r1154925:24c r1346224:100c r1346225:100c r1394274:94c r2344560:7c r2405237:51c r6858752:50c r9101272:30c r9109943:81c r9673858:34c r9708322:60c r9708507:26c r9708874:19c r9711749:10c r9720439:47c r9745479:24c r10032713:53c r10290270:55c r10297849:19c r10297940:49c r10358701:72c r10796646:94c r11350124:24c r11503184:20c r11580741:93c r11873555:9c r12871098:11c r13185421:65c r13191404:53c r18769978:100c r20012042:100c r20390775:95c';
+  var LAUB = {};
+  (function(){
+    var t = LAUB_ROH.split(' ');
+    for(var i=0;i<t.length;i++){
+      var dp = t[i].indexOf(':');
+      if(dp < 1) continue;
+      var kurz = t[i].slice(0, dp), rest = t[i].slice(dp+1);
+      var q = rest.charAt(rest.length-1);
+      var pct = parseInt(rest, 10);
+      if(isNaN(pct)) continue;
+      var id = (kurz.charAt(0) === 'w' ? 'way/' : 'relation/') + kurz.slice(1);
+      LAUB[id] = { pct: pct, src: q === 'o' ? 1 : q === 'n' ? 3 : 2 };
+    }
+  })();
+  // Trägt die Baumart nach, wenn sie nicht schon aus den Daten kam
+  function ergaenzeLaub(f){
+    var p = f.properties;
+    if(p.laubPct !== null && p.laubPct !== undefined) return;
+    var e = LAUB[p.osmId];
+    if(e){ p.laubPct = e.pct; p.ltSrc = e.src; }
+  }
+
+  /* ---------- Vorgebackene Walddaten ---------- */
+  // Format je Eintrag: [osmId, flächeKm2, osmTypCode, laubProzent, quelle, [[aussenring, loch, …], …], name?]
+  // osmTypCode: 0 landuse=forest · 1 natural=wood · 2 sonstiges
+  // laubProzent: -1 = unbekannt · quelle: 0 keine · 1 OSM-Tag · 2 Copernicus · 3 Copernicus-Nachbarschaft
+  // Ringe sind Encoded Polylines (Präzision 5); das Zeichen "!" steht für einen Backslash,
+  // damit die Datei ohne Escape-Sequenzen auskommt. Die Fläche stammt aus der
+  // unvereinfachten Originalgeometrie, gezeichnet wird die vereinfachte (max. 15 m Abweichung).
+  // Gebacken wurde nach Flächen-Mittelpunkt; Flächen direkt auf der Grenze können daher fehlen.
+  // Deshalb gilt nur der um 0,03° eingerückte Kern als abgedeckt – der Randstreifen wird live nachgeladen.
+  var BAKED_BBOX = [52.4118, 11.9974, 52.8010, 12.6770];   // Süd, West, Nord, Ost
+  var BAKED_DATE = '17.09.2026';
+
+  function decodePolyline(str){
+    var s = str.replace(/!/g, '\\');
+    var idx = 0, lat = 0, lon = 0, ring = [], b, shift, result;
+    while(idx < s.length){
+      shift = 0; result = 0;
+      do { b = s.charCodeAt(idx++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while(b >= 0x20);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+      shift = 0; result = 0;
+      do { b = s.charCodeAt(idx++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while(b >= 0x20);
+      lon += (result & 1) ? ~(result >> 1) : (result >> 1);
+      ring.push([lon / 1e5, lat / 1e5]);
+    }
+    if(ring.length < 3) return null;
+    ring.push(ring[0].slice());          // Ring schließen
+    return ring;
+  }
+
+  function loadBakedForests(){
+    var data = window.PILZRADAR_FORESTS;
+    if(!data || !data.length) return 0;
+    var count = 0;
+    var typNamen = ['Forst (landuse=forest)', 'Wald (natural=wood)', 'Wald'];
+    // Formaterkennung: in der alten Datei steht an Stelle 2 der Waldtyp als Text,
+    // in der neuen ein Zahlencode. So laufen beide Dateien.
+    var neuesFormat = typeof data[0][2] === 'number';
+    if(!neuesFormat) console.info('Walddatei im alten Format – Baumart kommt aus der Tabelle in dieser HTML.');
+    bakedAlt = !neuesFormat;
+    for(var i=0;i<data.length;i++){
+      var d = data[i];
+      var ringIdx = neuesFormat ? 5 : 3;
+      var polys = [];
+      for(var p=0; p<d[ringIdx].length; p++){
+        var rings = [];
+        for(var r=0; r<d[ringIdx][p].length; r++){
+          var ring = decodePolyline(d[ringIdx][p][r]);
+          if(ring) rings.push(ring);
+        }
+        if(rings.length) polys.push(rings);
+      }
+      if(!polys.length) continue;
+      var osmId = (d[0].charAt(0) === 'w' ? 'way/' : 'relation/') + d[0].slice(1);
+      if(forestIndex[osmId]) continue;
+      var f = {
+        type:'Feature',
+        geometry: polys.length === 1 ? {type:'Polygon', coordinates:polys[0]}
+                                     : {type:'MultiPolygon', coordinates:polys},
+        properties: neuesFormat
+          ? { osmId: osmId, name: d[6] || null, type: typNamen[d[2]] || 'Wald',
+              operator: null, areaKm2: d[1],
+              laubPct: (d[3] < 0 ? null : d[3]), ltSrc: d[4], baked: true }
+          : { osmId: osmId, name: d[4] || null, type: d[2],
+              operator: null, areaKm2: d[1], laubPct: null, ltSrc: 0, baked: true }
+      };
+      ergaenzeLaub(f);
+      forestIndex[osmId] = f;
+      forestLayer.addData(f);
+      count++;
+    }
+    if(count){
+      bakedGeladen = true;
+      var zellen = markBakedCells();     // Rasterzellen der Kernregion gelten als erledigt
+      console.info('Ortsdatei: ' + count + ' Flächen, ' + zellen + ' Rasterzellen abgedeckt');
+      updateCount();
+      setStatus($('forestStatus'), 'ok', count + ' Waldflächen aus Ortsdatei');
+    }
+    return count;
+  }
+
+  /* ---------- Start ---------- */
+  function zuruecksetzen(){
+    cellState = {}; wartend.length = 0; fehlerZuletzt = null;
+    forestIndex = {};
+    forestLayer.clearLayers();
+    updateCount();
+  }
+
+  $('reloadBtn').addEventListener('click', function(){
+    zuruecksetzen();
+    loadWeather();
+    loadBakedForests();
+    loadForestsForView();
+  });
+
+  // Erzwingt exakte Geometrien vom OSM-Server, auch innerhalb der vorgebackenen Region
+  $('liveBtn').addEventListener('click', function(){
+    zuruecksetzen();
+    bakedGeladen = false;
+    $('bakedNote').textContent = 'Exakte OSM-Geometrien werden geladen – die Ortsdatei wird für diese Sitzung übergangen.';
+    loadForestsForView();
+  });
+
+  baueArtenWahl();
+  loadWeather();
+  openCache().then(function(handle){
+    db = handle;
+    map.whenReady(function(){
+      var n = loadBakedForests();
+      renderTopListe();
+      var mitArt = 0;
+      Object.keys(forestIndex).forEach(function(k){
+        var lp = forestIndex[k].properties.laubPct;
+        if(lp !== null && lp !== undefined) mitArt++;
+      });
+      $('bakedNote').textContent = n
+        ? n + ' Waldflächen aus Ortsdatei (Stand ' + BAKED_DATE + ', Umrisse bis 15 m vereinfacht) · ' +
+          'Baumart für ' + mitArt + ' Flächen aus OpenStreetMap und Copernicus-Waldtypkarte · ' +
+          'außerhalb wird live nachgeladen und zwischengespeichert'
+        : 'Keine Ortsdatei gefunden – alle Flächen werden live von OpenStreetMap geladen.';
+      setTimeout(loadForestsForView, 300);
+    });
+  });
+
+})();
+</script>
+</body>
+</html>
