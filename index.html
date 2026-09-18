@@ -373,6 +373,10 @@
     if(text){ $('mapOverlayText').textContent = text; $('mapOverlay').classList.add('show'); }
     else { $('mapOverlay').classList.remove('show'); }
   }
+  // Deutsche Schreibweise: Komma als Dezimaltrennzeichen
+  function zahl(v, stellen){
+    return Number(v).toFixed(stellen === undefined ? 1 : stellen).replace('.', ',');
+  }
   function scoreColor(s){
     return s<20 ? '#c96657' : s<40 ? '#d9a441' : s<60 ? '#c9c24a' : s<80 ? '#6fa84d' : '#3f7a2e';
   }
@@ -707,7 +711,7 @@
   function popupHtml(f){
     var p = f.properties, s = forestScore(p);
     return '<b>' + waldName(f) + '</b><br>' +
-      '<span style="color:var(--muted)">' + leafLabel(p.laubPct) + ' · ' + p.areaKm2.toFixed(2) + ' km²</span><br>' +
+      '<span style="color:var(--muted)">' + leafLabel(p.laubPct) + ' · ' + zahl(p.areaKm2,2) + ' km²</span><br>' +
       'Bedingungsindex: <b>' + s + '/100</b><br>' +
       '<span style="font-size:10px;color:var(--muted)">OpenStreetMap ' + p.osmId +
       (p.baked ? ' · Umriss vereinfacht (max. 15 m)' : ' · exakte OSM-Geometrie') +
@@ -896,7 +900,7 @@
     $('selEmpty').style.display = 'none';
     $('selContent').classList.add('show');
     $('selName').textContent = waldName(f);
-    $('selMeta').textContent = p.areaKm2.toFixed(2) + ' km² · ' + leafLabel(laub) +
+    $('selMeta').textContent = zahl(p.areaKm2,2) + ' km² · ' + leafLabel(laub) +
       (p.operator ? ' · ' + p.operator : '') + ' · ' + entfernungText(f) +
       (p.name ? '' : ' · Lagebezeichnung, in OSM unbenannt');
     $('selScore').textContent = s;
@@ -939,7 +943,7 @@
   }
   function entfernungText(f){
     var d = entfernungKm(f);
-    return d.toFixed(1) + ' km ' + (meinOrt ? 'von deinem Standort' : 'von Rathenow');
+    return zahl(d,1) + ' km ' + (meinOrt ? 'von deinem Standort' : 'von Rathenow');
   }
 
   $('gpsBtn').addEventListener('click', function(){
@@ -983,9 +987,9 @@
       return '<div class="top-zeile" data-id="' + p.osmId + '">' +
         '<div class="top-wert" style="color:' + scoreColor(t.wert) + '">' + t.wert + '</div>' +
         '<div><div class="top-name">' + waldName(t.f) + '</div>' +
-        '<div class="top-sub">' + p.areaKm2.toFixed(1) + ' km² · ' +
+        '<div class="top-sub">' + zahl(p.areaKm2,1) + ' km² · ' +
         (laub === null ? 'Baumart unbekannt' : leafLabel(laub)) + ' · ' + art.kurz + '</div></div>' +
-        '<div class="top-dist">' + t.dist.toFixed(1) + ' km</div></div>';
+        '<div class="top-dist">' + zahl(t.dist,1) + ' km</div></div>';
     }).join('');
   }
 
@@ -1315,7 +1319,7 @@
     var rw = regenWirksam(D, todayIndex, art);
     var ff = frostFaktor(D, todayIndex, art);
     $('scoreCaption').innerHTML =
-      'Wirksamer Regen <b>' + rw.toFixed(1) + ' mm/Tag</b> (Nachlauf ' + art.lagMitte + ' ± ' +
+      'Wirksamer Regen <b>' + zahl(rw,1) + ' mm/Tag</b> (Nachlauf ' + art.lagMitte + ' ± ' +
       art.lagBreite + ' Tage) · Bodentemperatur ' +
       (dSel.bodenT === null ? '—' : Math.round(dSel.bodenT) + ' °C') +
       ' · Saison ' + Math.round(monatsFaktor(art, dSel.date)*100) + ' %' +
@@ -1340,7 +1344,7 @@
       var h = Math.max(2, Math.round(x.rain / maxR * 68));
       var fut = (from + i) > weather.todayIdx ? ' class="fut"' : '';
       return '<div' + fut + ' style="height:' + h + 'px" title="' + x.date + ': ' +
-        x.rain.toFixed(1) + ' mm"></div>';
+        zahl(x.rain,1) + ' mm"></div>';
     }).join('');
 
     // 7-Tage-Streifen
@@ -1398,7 +1402,7 @@
       (aktiveArt === 'gesamt' ? ' · beste Art: ' + art.name : '');
     $('heroSub').textContent = (WCODE[d.code] || '') + ' ' +
       (num(d.tmax) !== null ? Math.round(d.tmax) + '° / ' + Math.round(d.tmin) + '°' : '') +
-      ' · ' + d.rain.toFixed(1) + ' mm Regen · Boden ' +
+      ' · ' + zahl(d.rain,1) + ' mm Regen · Boden ' +
       (d.bodenT === null ? '—' : Math.round(d.bodenT) + '°C');
     renderArtenTabelle();
     refreshForestStyles();
