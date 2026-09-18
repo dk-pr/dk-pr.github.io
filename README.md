@@ -2,7 +2,7 @@
 
 Fund-Chance für Steinpilz, Marone und Pfifferling im Havelland – für jede einzelne Waldfläche.
 
-**Live: https://hvlon3-boop.github.io/pilzradar/**
+**Live: https://dk-pr.github.io/**
 
 ## Was die Karte zeigt
 
