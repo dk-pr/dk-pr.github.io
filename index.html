@@ -17,33 +17,19 @@
 <meta name="twitter:card" content="summary_large_image" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-  /* Herbst – warmes Laub über gedämpftem Moosgrün, Standard */
+  /* Zwei helle und zwei dunkle Varianten.
+     Hell:   Lichtung (Standard, warmes Waldgrün) · Papier (neutral, Karte im Vordergrund)
+     Dunkel: Dämmerung (kühl blaugrau) · Unterholz (tief moosgrün)                        */
+
+  /* Lichtung – Standard */
   :root{
     --green:#4a7c41; --green-2:#7aa85c; --green-3:#e3ecd8; --deep:#26331f;
     --ink:#2b3327; --muted:#71796a; --line:#e0e4d8; --soft:#f7f8f2; --white:#fff;
-    --amber:#c98a2e; --red:#b5533f; --blue:#5f92ab;
-    --akzent:#c98a2e;
+    --amber:#c98a2e; --red:#b5533f; --blue:#5f92ab; --akzent:#c98a2e;
     --shadow:0 12px 32px rgba(38,51,31,.09);
-    --bg:#f0f1e8;
-    --karte:#fff;
+    --bg:#f0f1e8; --karte:#fff;
   }
-  /* Nacht – für frühmorgens vor der Tour */
-  html[data-theme="nacht"]{
-    --green:#7fb069; --green-2:#a3c98a; --green-3:#2a3826; --deep:#e8ece3;
-    --ink:#dfe4d8; --muted:#8d968a; --line:#333a30; --soft:#232a20; --white:#1b2119;
-    --amber:#e0a94a; --red:#d4715c; --blue:#7fa8c4; --akzent:#e0a94a;
-    --shadow:0 12px 32px rgba(0,0,0,.45);
-    --bg:#151a13; --karte:#1b2119;
-  }
-  /* Kiefer – kühles Nadelgrün, hoher Kontrast */
-  html[data-theme="kiefer"]{
-    --green:#2f6b5f; --green-2:#5a9b8c; --green-3:#d9eae5; --deep:#16302b;
-    --ink:#1e332f; --muted:#657a75; --line:#d7e2df; --soft:#f2f8f6; --white:#fff;
-    --amber:#c08a3e; --red:#b5544a; --blue:#4f8fa8; --akzent:#2f6b5f;
-    --shadow:0 12px 32px rgba(22,48,43,.10);
-    --bg:#eaf1ef; --karte:#fff;
-  }
-  /* Papier – neutral und ruhig, wenn die Karte im Vordergrund stehen soll */
+  /* Papier – neutral und ruhig */
   html[data-theme="papier"]{
     --green:#6a6350; --green-2:#96907c; --green-3:#eae6dc; --deep:#2e2b24;
     --ink:#332f27; --muted:#7c776c; --line:#e3ded2; --soft:#f8f6f0; --white:#fff;
@@ -51,13 +37,37 @@
     --shadow:0 12px 32px rgba(46,43,36,.08);
     --bg:#f3f0e8; --karte:#fff;
   }
-  /* Nachtmodus dunkelt nur die Karte ab, die Waldflächen bleiben farbecht */
-  html[data-theme="nacht"] .leaflet-tile{filter:brightness(.62) contrast(1.08) saturate(.75)}
-  html[data-theme="nacht"] .leaflet-popup-content-wrapper,
-  html[data-theme="nacht"] .leaflet-popup-tip{background:var(--karte);color:var(--ink)}
-  html[data-theme="nacht"] .leaflet-control-zoom a{background:var(--karte);color:var(--ink);border-color:var(--line)}
-  html[data-theme="nacht"] .leaflet-control-attribution{background:rgba(27,33,25,.8);color:var(--muted)}
-  html[data-theme="nacht"] .leaflet-control-attribution a{color:var(--green-2)}
+  /* Dämmerung – kühles Blaugrau, für frühmorgens */
+  html[data-theme="daemmerung"]{
+    --green:#7aa7c4; --green-2:#a2c4da; --green-3:#26333d; --deep:#e6ecf1;
+    --ink:#dbe3ea; --muted:#8a949e; --line:#2f3941; --soft:#1f272e; --white:#192026;
+    --amber:#dda94f; --red:#d4715c; --blue:#8fb8d4; --akzent:#dda94f;
+    --shadow:0 12px 32px rgba(0,0,0,.45);
+    --bg:#131a1f; --karte:#192026;
+  }
+  /* Unterholz – tiefes Moosgrün */
+  html[data-theme="unterholz"]{
+    --green:#7fb069; --green-2:#a3c98a; --green-3:#2a3826; --deep:#e8ece3;
+    --ink:#dfe4d8; --muted:#8d968a; --line:#333a30; --soft:#232a20; --white:#1b2119;
+    --amber:#e0a94a; --red:#d4715c; --blue:#7fa8c4; --akzent:#e0a94a;
+    --shadow:0 12px 32px rgba(0,0,0,.45);
+    --bg:#151a13; --karte:#1b2119;
+  }
+  /* Dunkle Varianten: nur die Kartenkacheln abdunkeln, die Waldflächen bleiben farbecht */
+  html[data-theme="daemmerung"] .leaflet-tile,
+  html[data-theme="unterholz"] .leaflet-tile{filter:brightness(.62) contrast(1.08) saturate(.75)}
+  html[data-theme="daemmerung"] .leaflet-popup-content-wrapper,
+  html[data-theme="daemmerung"] .leaflet-popup-tip,
+  html[data-theme="unterholz"] .leaflet-popup-content-wrapper,
+  html[data-theme="unterholz"] .leaflet-popup-tip{background:var(--karte);color:var(--ink)}
+  html[data-theme="daemmerung"] .leaflet-control-zoom a,
+  html[data-theme="unterholz"] .leaflet-control-zoom a{background:var(--karte);color:var(--ink);border-color:var(--line)}
+  html[data-theme="daemmerung"] .leaflet-control-attribution,
+  html[data-theme="unterholz"] .leaflet-control-attribution{background:rgba(0,0,0,.55);color:var(--muted)}
+  html[data-theme="daemmerung"] .leaflet-control-attribution a,
+  html[data-theme="unterholz"] .leaflet-control-attribution a{color:var(--green-2)}
+  html[data-theme="daemmerung"] .leaflet-container,
+  html[data-theme="unterholz"] .leaflet-container{background:var(--soft)}
 
   *{box-sizing:border-box}
   body{margin:0;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg)}
@@ -101,7 +111,6 @@
   .layer-tabs button{border:0;background:transparent;border-radius:999px;padding:5px 12px;font-size:12px;color:var(--muted)}
   .layer-tabs button.active{background:var(--white);color:var(--deep);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
   .mini-pill{font-size:11px;color:var(--muted);background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
-  .baked-note{font-size:11px;color:var(--muted);padding:7px 16px;border-bottom:1px solid var(--line);background:var(--soft)}
   #map{flex:1;min-height:56vh;background:var(--soft)}
   .legend{display:flex;align-items:center;gap:14px;padding:10px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);flex-wrap:wrap}
   .legend .sw{display:inline-flex;align-items:center;gap:6px}
@@ -197,10 +206,10 @@
     </div>
     <div class="header-actions">
       <div class="theme-switcher"><span>Theme</span>
-        <button class="active" data-theme="herbst">Herbst</button>
-        <button data-theme="kiefer">Kiefer</button>
+        <button class="active" data-theme="lichtung">Lichtung</button>
         <button data-theme="papier">Papier</button>
-        <button data-theme="nacht">Nacht</button>
+        <button data-theme="daemmerung">Dämmerung</button>
+        <button data-theme="unterholz">Unterholz</button>
       </div>
       <div class="status" id="weatherStatus"><i></i><span>Wetter wird geladen …</span></div>
       <div class="status" id="forestStatus"><i></i><span>Waldflächen werden geladen …</span></div>
@@ -225,7 +234,6 @@
           <button class="btn" id="homeBtn">Rathenow zentrieren</button>
         </div>
       </div>
-      <div class="baked-note" id="bakedNote">Waldflächen werden vorbereitet …</div>
       <div id="map"></div>
       <div class="map-overlay" id="mapOverlay"><span class="spinner"></span><span id="mapOverlayText">Waldflächen werden von OpenStreetMap geladen …</span></div>
       <div class="notice" id="notice"></div>
@@ -437,10 +445,12 @@
   });
   $('homeBtn').addEventListener('click', function(){ map.setView(RATHENOW, START_ZOOM); });
 
+  var THEMES = ['lichtung','papier','daemmerung','unterholz'];
   function setzeTheme(name){
+    if(THEMES.indexOf(name) < 0) name = THEMES[0];     // alte gespeicherte Namen abfangen
     document.querySelectorAll('[data-theme]').forEach(function(x){
       x.classList.toggle('active', x.dataset.theme === name); });
-    if(name === 'herbst') document.documentElement.removeAttribute('data-theme');
+    if(name === 'lichtung') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', name);
     try { localStorage.setItem('pilzradar-theme', name); } catch(e){}
   }
@@ -1588,7 +1598,7 @@
   $('liveBtn').addEventListener('click', function(){
     zuruecksetzen();
     bakedGeladen = false;
-    $('bakedNote').textContent = 'Exakte OSM-Geometrien werden geladen – die Ortsdatei wird für diese Sitzung übergangen.';
+    setNotice('Exakte OSM-Geometrien werden geladen – die Ortsdatei wird für diese Sitzung übergangen.');
     loadForestsForView();
   });
 
@@ -1599,16 +1609,8 @@
     map.whenReady(function(){
       var n = loadBakedForests();
       renderTopListe();
-      var mitArt = 0;
-      Object.keys(forestIndex).forEach(function(k){
-        var lp = forestIndex[k].properties.laubPct;
-        if(lp !== null && lp !== undefined) mitArt++;
-      });
-      $('bakedNote').textContent = n
-        ? n + ' Waldflächen aus Ortsdatei (Stand ' + BAKED_DATE + ', Umrisse bis 15 m vereinfacht) · ' +
-          'Baumart für ' + mitArt + ' Flächen aus OpenStreetMap und Copernicus-Waldtypkarte · ' +
-          'außerhalb wird live nachgeladen und zwischengespeichert'
-        : 'Keine Ortsdatei gefunden – alle Flächen werden live von OpenStreetMap geladen.';
+      // Herkunft der Daten steht in der Fußzeile und in jedem Popup, nicht mehr über der Karte
+      if(!n) setNotice('Keine Ortsdatei gefunden – alle Flächen werden live von OpenStreetMap geladen.');
       setTimeout(loadForestsForView, 300);
     });
   });
