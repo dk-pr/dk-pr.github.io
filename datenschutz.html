@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Über diese Seite · Pilzradar Rathenow</title>
+<meta name="robots" content="noindex" />
+<style>
+  :root{--green:#4a7c41;--deep:#26331f;--ink:#2b3327;--muted:#71796a;--line:#e0e4d8;--bg:#f0f1e8;--white:#fff}
+  @media (prefers-color-scheme: dark){
+    :root{--green:#7fb069;--deep:#e8ece3;--ink:#dfe4d8;--muted:#8d968a;--line:#333a30;--bg:#151a13;--white:#1b2119}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.65}
+  header{background:var(--white);border-bottom:1px solid var(--line);padding:16px 20px}
+  .kopf{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  .mark{width:34px;height:34px;background:var(--green);border-radius:9px;display:grid;place-items:center;
+        color:#fff;font-weight:800;font-size:15px;flex:none}
+  .wrap{max-width:720px;margin:0 auto;padding:36px 20px 64px}
+  a{color:var(--green)}
+  h1{font-size:25px;color:var(--deep);margin:0 0 6px}
+  h2{font-size:13px;color:var(--deep);margin:26px 0 5px;text-transform:uppercase;letter-spacing:.08em}
+  .karte{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-top:18px}
+  .karte h2:first-child{margin-top:0}
+  ul{padding-left:20px;margin:6px 0}
+  li{margin-bottom:4px}
+  .warn{border-left:3px solid var(--green);padding-left:14px;margin:14px 0}
+  .klein{font-size:13px;color:var(--muted)}
+  footer{max-width:720px;margin:0 auto;padding:0 20px 40px}
+</style>
+</head>
+<body>
+<header><div class="kopf"><div class="mark">DK</div><strong>Pilzradar Rathenow</strong></div></header>
+<div class="wrap">
+
+<h1>Über diese Seite</h1>
+<p class="klein">Ein privates Bastelprojekt für die Wälder um Rathenow. Keine Werbung, keine Spenden,
+kein kommerzieller Zweck.</p>
+
+<div class="karte">
+  <h2>Was der Index bedeutet</h2>
+  <p>
+    Die Karte zeigt einen <strong>experimentellen Bedingungsindex</strong>. Er schätzt aus Regenverlauf,
+    Bodenfeuchte, Bodentemperatur, Jahreszeit und Baumbestand, ob die Bedingungen für eine Pilzart
+    gerade günstig sind. Er sagt <strong>nicht</strong>, ob an einer Stelle Pilze stehen.
+  </p>
+  <div class="warn">
+    <strong>Bestimme jeden Pilz selbst.</strong> Iss nichts, was du nicht sicher kennst.
+    Im Zweifel hilft eine Pilzberatungsstelle. Diese Seite ersetzt keine Pilzkenntnis.
+  </div>
+  <p>
+    Die Artenprofile beruhen auf Erfahrungswerten aus der Pilzliteratur, nicht auf gemessenen Konstanten.
+    Für Richtigkeit, Vollständigkeit und Aktualität der Daten wird keine Gewähr übernommen.
+  </p>
+</div>
+
+<div class="karte">
+  <h2>Sammeln im Wald</h2>
+  <ul>
+    <li>In <strong>Naturschutzgebieten</strong> ist das Sammeln in der Regel verboten oder
+      genehmigungspflichtig. Die einblendbaren Grenzen stammen aus OpenStreetMap, können unvollständig
+      sein und ersetzen keine Prüfung vor Ort.</li>
+    <li>Wälder sind überwiegend Privat- oder Landeseigentum. Betretungsrecht und zulässige Menge für den
+      Eigenbedarf richten sich nach Bundes- und Landesrecht.</li>
+    <li>Einige häufige Arten stehen unter besonderem Schutz und dürfen nur in geringen Mengen für den
+      eigenen Bedarf gesammelt werden.</li>
+  </ul>
+</div>
+
+<div class="karte">
+  <h2>Datenschutz</h2>
+  <p>
+    Die Seite setzt <strong>keine Cookies</strong>, bindet keine Analyse- oder Werbedienste ein,
+    legt keine Nutzerkonten an und speichert nichts auf einem Server.
+  </p>
+
+  <h2>Was im Browser bleibt</h2>
+  <p>
+    Die gewählte Farbvariante und bereits geladene Waldflächen werden lokal im Browser abgelegt
+    (localStorage und IndexedDB), damit die Seite beim nächsten Besuch schneller startet.
+    Diese Daten verlassen das Gerät nicht und lassen sich über die Browsereinstellungen löschen.
+  </p>
+
+  <h2>Standort</h2>
+  <p>
+    Der Standort wird nur nach Druck auf „Mein Standort“ und nur nach ausdrücklicher Freigabe im Browser
+    abgefragt. Die Position wird ausschließlich im Browser verwendet, nicht gespeichert, nicht übertragen.
+  </p>
+
+  <h2>Dienste Dritter</h2>
+  <p>
+    Beim Aufruf werden Inhalte von folgenden Anbietern nachgeladen. Dabei wird technisch bedingt
+    die IP-Adresse des Besuchers an diese Anbieter übermittelt:
+  </p>
+  <ul>
+    <li><strong>basemap.de / Bundesamt für Kartographie und Geodäsie</strong> – Kartenkacheln</li>
+    <li><strong>OpenStreetMap-Infrastruktur (Overpass), OpenTopoMap, Esri</strong> – Waldflächen und alternative Karten</li>
+    <li><strong>Open-Meteo</strong> – Wetter- und Bodendaten</li>
+    <li><strong>unpkg.com</strong> – die Kartenbibliothek Leaflet</li>
+  </ul>
+
+  <h2>Hosting</h2>
+  <p>
+    Die Seite liegt bei GitHub Pages (GitHub Inc., USA). Beim Abruf verarbeitet GitHub technische
+    Zugriffsdaten einschließlich IP-Adresse.
+  </p>
+
+  <h2>Verantwortlich und Kontakt</h2>
+  <p>
+    Denny Kühne<br>
+    E-Mail: [hier eine Kontaktadresse eintragen]
+  </p>
+  <p class="klein">
+    Rein private, nicht geschäftsmäßige Seite ohne Werbung und ohne Einnahmen.
+  </p>
+</div>
+
+<div class="karte">
+  <h2>Datenquellen und Lizenzen</h2>
+  <ul>
+    <li><strong>Waldflächen, Schutzgebiete, Ortsnamen:</strong> © OpenStreetMap-Mitwirkende,
+      Daten unter <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noopener">ODbL</a>.
+      Über Overpass abgerufen, Umrisse für die Darstellung vereinfacht.</li>
+    <li><strong>Kartenhintergrund:</strong> © basemap.de / BKG; OpenTopoMap (CC BY-SA);
+      Luftbild © Esri und Partner.</li>
+    <li><strong>Baumart (Laub- und Nadelanteil):</strong> Copernicus Land Monitoring Service,
+      High Resolution Layer Forest Type 2012, © European Union, Europäische Umweltagentur.</li>
+    <li><strong>Wetter- und Bodendaten:</strong> <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, CC BY 4.0.</li>
+    <li><strong>Kartenbibliothek:</strong> Leaflet, BSD-2-Clause.</li>
+  </ul>
+</div>
+
+</div>
+<footer><a href="index.html">← Zurück zur Karte</a></footer>
+</body>
+</html>
