@@ -234,7 +234,6 @@
           <span class="mini-pill" id="forestCount">0 Waldflächen</span>
           <label class="schalter"><input type="checkbox" id="nsgToggle"> Schutzgebiete</label>
           <button class="btn" id="gpsBtn">Mein Standort</button>
-          <button class="btn" id="liveBtn">Exakt von OSM laden</button>
           <button class="btn" id="homeBtn">Rathenow zentrieren</button>
         </div>
       </div>
@@ -896,6 +895,54 @@
       overlay(null);
     }
   }
+
+  /* ---------- Gesten: die Karte darf das Scrollen nicht schlucken ----------
+     Am Telefon schiebt ein Finger die Seite, zwei Finger bewegen die Karte.
+     Am Rechner scrollt das Rad die Seite, mit Strg zoomt es die Karte.       */
+  (function(){
+    var mapEl = $('map');
+    var istTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    var letzterHinweis = 0;
+    function hinweis(text){
+      var jetzt = Date.now();
+      if(jetzt - letzterHinweis < 4000) return;   // nicht bei jeder Berührung nerven
+      letzterHinweis = jetzt;
+      setNotice(text);
+    }
+
+    if(istTouch){
+      // touch-action steuert, wer die Geste bekommt: pan-y lässt die Seite scrollen,
+      // none übergibt sie an Leaflet, sobald der zweite Finger aufliegt.
+      map.dragging.disable();
+      mapEl.style.touchAction = 'pan-y';
+      mapEl.addEventListener('touchstart', function(e){
+        if(e.touches.length >= 2){
+          mapEl.style.touchAction = 'none';
+          map.dragging.enable();
+        } else {
+          mapEl.style.touchAction = 'pan-y';
+          map.dragging.disable();
+          hinweis('Karte mit zwei Fingern verschieben und zoomen');
+        }
+      }, { passive:true });
+      mapEl.addEventListener('touchend', function(e){
+        if(e.touches.length < 2){
+          map.dragging.disable();
+          mapEl.style.touchAction = 'pan-y';
+        }
+      }, { passive:true });
+    }
+
+    map.scrollWheelZoom.disable();                // Rad scrollt die Seite
+    mapEl.addEventListener('wheel', function(e){
+      if(e.ctrlKey || e.metaKey){
+        if(!map.scrollWheelZoom.enabled()) map.scrollWheelZoom.enable();
+      } else {
+        if(map.scrollWheelZoom.enabled()) map.scrollWheelZoom.disable();
+        if(!istTouch) hinweis('Zum Zoomen Strg gedrückt halten – oder die Knöpfe + und − nutzen');
+      }
+    }, { passive:true });
+  })();
 
   var moveTimer = null;
   map.on('moveend zoomend', function(){
@@ -1595,14 +1642,6 @@
     zuruecksetzen();
     loadWeather();
     loadBakedForests();
-    loadForestsForView();
-  });
-
-  // Erzwingt exakte Geometrien vom OSM-Server, auch innerhalb der vorgebackenen Region
-  $('liveBtn').addEventListener('click', function(){
-    zuruecksetzen();
-    bakedGeladen = false;
-    setNotice('Exakte OSM-Geometrien werden geladen – die Ortsdatei wird für diese Sitzung übergangen.');
     loadForestsForView();
   });
 
