@@ -53,9 +53,13 @@
     --shadow:0 12px 32px rgba(0,0,0,.45);
     --bg:#151a13; --karte:#1b2119;
   }
-  /* Dunkle Varianten: nur die Kartenkacheln abdunkeln, die Waldflächen bleiben farbecht */
+  /* Dunkle Varianten: Kacheln abdunkeln und den Waldflächen etwas Deckkraft nehmen,
+     sonst leuchtet die Karte als heller Block aus der dunklen Oberfläche heraus.
+     Die Indexfarben bleiben unterscheidbar. */
   html[data-theme="daemmerung"] .leaflet-tile,
-  html[data-theme="unterholz"] .leaflet-tile{filter:brightness(.62) contrast(1.08) saturate(.75)}
+  html[data-theme="unterholz"] .leaflet-tile{filter:brightness(.58) contrast(1.05) saturate(.6)}
+  html[data-theme="daemmerung"] .leaflet-overlay-pane canvas,
+  html[data-theme="unterholz"] .leaflet-overlay-pane canvas{opacity:.72}
   html[data-theme="daemmerung"] .leaflet-popup-content-wrapper,
   html[data-theme="daemmerung"] .leaflet-popup-tip,
   html[data-theme="unterholz"] .leaflet-popup-content-wrapper,
