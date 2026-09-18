@@ -121,14 +121,14 @@
   .legend .sw b{width:14px;height:10px;border-radius:3px;display:inline-block}
   .map-overlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--karte);border:1px solid var(--line);border-radius:12px;padding:12px 18px;font-size:13px;color:var(--ink);box-shadow:var(--shadow);z-index:900;display:none;align-items:center;gap:10px;max-width:80%}
   .map-overlay.show{display:flex}
-  /* Meldung mittig über der Karte – dort schaut man beim Wischen hin.
-     Farben aus den Theme-Tokens, sonst stünde in den dunklen Varianten
-     weiße Schrift auf hellem Grund. */
-  .notice{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);
-    max-width:min(420px,80%);background:var(--karte);color:var(--ink);border:1px solid var(--line);
-    font-size:13px;line-height:1.45;border-radius:12px;padding:13px 17px;z-index:900;
-    text-align:center;opacity:0;pointer-events:none;transition:.2s;box-shadow:var(--shadow)}
-  .notice.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  /* Meldung oben rechts in der Karte, in Signalrot.
+     Oben links sitzen die Zoomknöpfe, unten rechts der Kartenhinweis – rechts oben ist frei. */
+  .notice{position:absolute;right:12px;top:12px;max-width:min(300px,64%);
+    background:var(--red);color:#fff;
+    font-size:12.5px;line-height:1.4;border-radius:10px;padding:10px 13px;z-index:900;
+    opacity:0;transform:translateY(-8px);pointer-events:none;transition:.2s;
+    box-shadow:0 8px 22px rgba(0,0,0,.3)}
+  .notice.show{opacity:1;transform:none}
   .spinner{width:15px;height:15px;border:2px solid var(--green-3);border-top-color:var(--green);border-radius:50%;animation:spin .9s linear infinite;flex:none}
   @keyframes spin{to{transform:rotate(360deg)}}
 
