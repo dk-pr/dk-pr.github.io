@@ -121,8 +121,14 @@
   .legend .sw b{width:14px;height:10px;border-radius:3px;display:inline-block}
   .map-overlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--karte);border:1px solid var(--line);border-radius:12px;padding:12px 18px;font-size:13px;color:var(--ink);box-shadow:var(--shadow);z-index:600;display:none;align-items:center;gap:10px;max-width:80%}
   .map-overlay.show{display:flex}
-  .notice{position:absolute;left:16px;bottom:56px;max-width:min(420px,70%);background:var(--deep);color:#fff;font-size:12px;line-height:1.45;border-radius:10px;padding:10px 13px;z-index:700;opacity:0;transform:translateY(6px);pointer-events:none;transition:.25s}
-  .notice.show{opacity:.96;transform:none}
+  /* Meldung mittig über der Karte – dort schaut man beim Wischen hin.
+     Farben aus den Theme-Tokens, sonst stünde in den dunklen Varianten
+     weiße Schrift auf hellem Grund. */
+  .notice{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);
+    max-width:min(420px,80%);background:var(--karte);color:var(--ink);border:1px solid var(--line);
+    font-size:13px;line-height:1.45;border-radius:12px;padding:13px 17px;z-index:700;
+    text-align:center;opacity:0;pointer-events:none;transition:.2s;box-shadow:var(--shadow)}
+  .notice.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
   .spinner{width:15px;height:15px;border:2px solid var(--green-3);border-top-color:var(--green);border-radius:50%;animation:spin .9s linear infinite;flex:none}
   @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -919,6 +925,7 @@
         if(e.touches.length >= 2){
           mapEl.style.touchAction = 'none';
           map.dragging.enable();
+          clearNotice();                          // verstanden – Meldung weg
         } else {
           mapEl.style.touchAction = 'pan-y';
           map.dragging.disable();
@@ -937,6 +944,7 @@
     mapEl.addEventListener('wheel', function(e){
       if(e.ctrlKey || e.metaKey){
         if(!map.scrollWheelZoom.enabled()) map.scrollWheelZoom.enable();
+        clearNotice();
       } else {
         if(map.scrollWheelZoom.enabled()) map.scrollWheelZoom.disable();
         if(!istTouch) hinweis('Zum Zoomen Strg gedrückt halten – oder die Knöpfe + und − nutzen');
@@ -1176,6 +1184,12 @@
     n.textContent = txt; n.classList.add('show');
     clearTimeout(window.noticeTimer);
     window.noticeTimer = setTimeout(function(){ n.classList.remove('show'); }, 5000);
+  }
+  function clearNotice(){
+    var n = $('notice');
+    if(!n) return;
+    clearTimeout(window.noticeTimer);
+    n.classList.remove('show');
   }
 
   /* ---------- Wetter ---------- */
