@@ -119,14 +119,14 @@
   .legend{display:flex;align-items:center;gap:14px;padding:10px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);flex-wrap:wrap}
   .legend .sw{display:inline-flex;align-items:center;gap:6px}
   .legend .sw b{width:14px;height:10px;border-radius:3px;display:inline-block}
-  .map-overlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--karte);border:1px solid var(--line);border-radius:12px;padding:12px 18px;font-size:13px;color:var(--ink);box-shadow:var(--shadow);z-index:600;display:none;align-items:center;gap:10px;max-width:80%}
+  .map-overlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--karte);border:1px solid var(--line);border-radius:12px;padding:12px 18px;font-size:13px;color:var(--ink);box-shadow:var(--shadow);z-index:900;display:none;align-items:center;gap:10px;max-width:80%}
   .map-overlay.show{display:flex}
   /* Meldung mittig über der Karte – dort schaut man beim Wischen hin.
      Farben aus den Theme-Tokens, sonst stünde in den dunklen Varianten
      weiße Schrift auf hellem Grund. */
   .notice{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);
     max-width:min(420px,80%);background:var(--karte);color:var(--ink);border:1px solid var(--line);
-    font-size:13px;line-height:1.45;border-radius:12px;padding:13px 17px;z-index:700;
+    font-size:13px;line-height:1.45;border-radius:12px;padding:13px 17px;z-index:900;
     text-align:center;opacity:0;pointer-events:none;transition:.2s;box-shadow:var(--shadow)}
   .notice.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
   .spinner{width:15px;height:15px;border:2px solid var(--green-3);border-top-color:var(--green);border-radius:50%;animation:spin .9s linear infinite;flex:none}
@@ -243,9 +243,12 @@
           <button class="btn" id="homeBtn">Rathenow zentrieren</button>
         </div>
       </div>
-      <div id="map"></div>
-      <div class="map-overlay" id="mapOverlay"><span class="spinner"></span><span id="mapOverlayText">Waldflächen werden von OpenStreetMap geladen …</span></div>
-      <div class="notice" id="notice"></div>
+      <!-- Meldung und Ladehinweis liegen in der Karte, damit sie exakt auf deren Mitte sitzen
+           und nicht auf der Mitte der Umrandung mit Werkzeugleiste und Legende. -->
+      <div id="map">
+        <div class="map-overlay" id="mapOverlay"><span class="spinner"></span><span id="mapOverlayText">Waldflächen werden von OpenStreetMap geladen …</span></div>
+        <div class="notice" id="notice"></div>
+      </div>
       <div class="legend">
         <span>Fundbedingungen je Fläche:</span>
         <span class="sw"><b style="background:#c96657"></b>0–20</span>
